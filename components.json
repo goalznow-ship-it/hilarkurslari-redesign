@@ -1,0 +1,25 @@
+{
+  "$schema": "https://ui.shadcn.com/schemas/components.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": true,
+  "aliases": {
+    "@/components": "./components",
+    "@/lib": "./lib"
+  },
+  "components": {
+    "button": {
+      "style": "default",
+      "lazy": true
+    },
+    "input": {
+      "style": "default",
+      "lazy": true
+    },
+    "card": {
+      "style": "default",
+      "lazy": true
+    }
+  }
+}
