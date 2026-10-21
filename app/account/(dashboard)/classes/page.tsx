@@ -22,6 +22,7 @@ import {
   Button,
   Card,
   CardContent,
+  StatCard,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -168,10 +169,10 @@ export default function ClassesPage() {
       {/* ===== Səhifə başlığı ===== */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-xl font-bold text-neutral-900">
             Siniflər &amp; Qruplar
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-neutral-500">
             Siniflər, şöbələr və hazırlıq qruplarını idarə edin — müəllim və
             şagird sayı ilə.
           </p>
@@ -179,7 +180,7 @@ export default function ClassesPage() {
 
         <Button
           onClick={openNew}
-          className="gap-1.5 bg-[#4a1c2c] text-white hover:bg-[#381420]"
+          className="gap-1.5 bg-brand-700 text-white hover:bg-brand-800"
         >
           <Plus className="size-4" />
           Yeni sinif
@@ -193,35 +194,31 @@ export default function ClassesPage() {
           label="Cəmi sinif"
           value={String(stats.totalClasses)}
           hint="qruplar daxil"
-          tone="violet"
         />
         <StatCard
           icon={Users}
           label="Cəmi şagird"
           value={String(stats.totalStudents)}
           hint="bütün siniflər"
-          tone="sky"
         />
         <StatCard
           icon={GraduationCap}
           label="Aktiv tədris ili"
           value={stats.activeYear}
           hint={`${stats.years} il məlumatı`}
-          tone="emerald"
         />
         <StatCard
           icon={UserRound}
           label="Müəllim sayı"
           value={String(stats.teachers)}
           hint="unikal sinif rəhbəri"
-          tone="amber"
         />
       </section>
 
       {/* ===== Axtarış ===== */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <Search className="size-4 text-slate-400" />
-        <span className="text-xs font-medium text-slate-500">Axtarış:</span>
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
+        <Search className="size-4 text-neutral-400" />
+        <span className="text-xs font-medium text-neutral-500">Axtarış:</span>
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -234,7 +231,7 @@ export default function ClassesPage() {
             variant="ghost"
             size="sm"
             onClick={() => setSearch("")}
-            className="ml-auto text-xs text-slate-500"
+            className="ml-auto text-xs text-neutral-500"
           >
             Axtarışı təmizlə
           </Button>
@@ -243,24 +240,24 @@ export default function ClassesPage() {
 
       {/* ===== Cədvəl ===== */}
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-          <span className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-slate-100">
-            <Layers className="size-6 text-slate-400" />
+        <div className="rounded-xl border border-neutral-200 bg-white p-12 text-center shadow-sm">
+          <span className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-neutral-100">
+            <Layers className="size-6 text-neutral-400" />
           </span>
-          <p className="text-sm font-medium text-slate-700">
+          <p className="text-sm font-medium text-neutral-700">
             {classes.length === 0
               ? "Hələ sinif yoxdur"
               : "Axtarışa uyğun sinif tapılmadı"}
           </p>
           {classes.length === 0 && (
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-neutral-500">
               İlk sinifi yaratmaq üçün “Yeni sinif” düyməsindən istifadə edin.
             </p>
           )}
           {classes.length === 0 && (
             <Button
               onClick={openNew}
-              className="mt-5 gap-1.5 bg-[#4a1c2c] text-white hover:bg-[#381420]"
+              className="mt-5 gap-1.5 bg-brand-700 text-white hover:bg-brand-800"
             >
               <Plus className="size-4" />
               Yeni sinif
@@ -268,29 +265,79 @@ export default function ClassesPage() {
           )}
         </div>
       ) : (
-        <Card className="gap-0 rounded-xl border-slate-200 bg-white py-0 shadow-sm">
+        <Card className="gap-0 rounded-lg border-neutral-200 bg-white py-0 shadow-xs">
           <CardContent className="px-0 py-0">
-            <div className="overflow-x-auto">
+            {/* Mobil: kart görünüşü */}
+            <ul className="divide-y divide-neutral-100 md:hidden">
+              {filtered.map((c) => (
+                <li key={c.id} className="px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-neutral-900">{c.name}</p>
+                      {c.section && (
+                        <p className="mt-0.5 text-xs text-neutral-500">
+                          Şöbə: {c.section}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant="neutral">{c.grade}</Badge>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                    <dt className="text-neutral-500">Müəllim</dt>
+                    <dd className="truncate text-neutral-800">{c.teacher}</dd>
+                    <dt className="text-neutral-500">Şagird sayı</dt>
+                    <dd className="tnum text-neutral-800">{c.studentCount}</dd>
+                    <dt className="text-neutral-500">Tədris ili</dt>
+                    <dd className="text-neutral-800">{c.academicYear}</dd>
+                  </dl>
+                  <div className="mt-3 flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEdit(c)}
+                      className="text-neutral-500"
+                    >
+                      <Pencil className="size-4" />
+                      Redaktə
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(c)}
+                      className="text-neutral-500"
+                    >
+                      <Trash2 className="size-4" />
+                      Sil
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {/* Desktop: cədvəl */}
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[820px] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100 text-left text-xs text-slate-500">
-                    <th className="px-6 py-3.5 font-medium">Sinif</th>
-                    <th className="px-4 py-3.5 font-medium">Sinif</th>
-                    <th className="px-4 py-3.5 font-medium">Müəllim</th>
-                    <th className="px-4 py-3.5 font-medium">Şagird sayı</th>
-                    <th className="px-4 py-3.5 font-medium">Tədris ili</th>
-                    <th className="px-6 py-3.5 text-right font-medium">
+                  <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">
+                    <th className="px-6 py-3 font-medium">Sinif</th>
+                    <th className="px-4 py-3 font-medium">Sinif</th>
+                    <th className="px-4 py-3 font-medium">Müəllim</th>
+                    <th className="px-4 py-3 font-medium">Şagird sayı</th>
+                    <th className="px-4 py-3 font-medium">Tədris ili</th>
+                    <th className="px-6 py-3 text-right font-medium">
                       Əməliyyat
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-neutral-100">
                   {filtered.map((c) => (
-                    <tr key={c.id} className="hover:bg-slate-50">
+                    <tr key={c.id} className="hover:bg-neutral-50">
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-slate-900">{c.name}</p>
+                        <p className="font-semibold text-neutral-900">
+                          {c.name}
+                        </p>
                         {c.section && (
-                          <p className="mt-0.5 text-xs text-slate-500">
+                          <p className="mt-0.5 text-xs text-neutral-500">
                             Şöbə: {c.section}
                           </p>
                         )}
@@ -298,11 +345,11 @@ export default function ClassesPage() {
                       <td className="px-4 py-4">
                         <Badge variant="neutral">{c.grade}</Badge>
                       </td>
-                      <td className="px-4 py-4 text-slate-700">{c.teacher}</td>
-                      <td className="px-4 py-4 text-slate-700 tabular-nums">
+                      <td className="px-4 py-4 text-neutral-700">{c.teacher}</td>
+                      <td className="tnum px-4 py-4 text-neutral-700">
                         {c.studentCount}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-slate-600">
+                      <td className="px-4 py-4 whitespace-nowrap text-neutral-600">
                         {c.academicYear}
                       </td>
                       <td className="px-6 py-4">
@@ -313,7 +360,7 @@ export default function ClassesPage() {
                             onClick={() => openEdit(c)}
                             title="Redaktə et"
                             aria-label={`${c.name} sinifini redaktə et`}
-                            className="text-slate-400 hover:text-[#4a1c2c]"
+                            className="text-neutral-400 hover:text-brand-700"
                           >
                             <Pencil className="size-4" />
                           </Button>
@@ -323,7 +370,7 @@ export default function ClassesPage() {
                             onClick={() => handleDelete(c)}
                             title="Sil"
                             aria-label={`${c.name} sinifini sil`}
-                            className="text-slate-400 hover:text-red-600"
+                            className="text-neutral-400 hover:text-danger-fg"
                           >
                             <Trash2 className="size-4" />
                           </Button>
@@ -448,7 +495,7 @@ export default function ClassesPage() {
               type="button"
               onClick={handleSave}
               disabled={!form.name.trim() || !form.teacher.trim()}
-              className="bg-[#4a1c2c] text-white hover:bg-[#381420]"
+              className="bg-brand-700 text-white hover:bg-brand-800"
             >
               Yadda Saxla
             </Button>
@@ -459,50 +506,3 @@ export default function ClassesPage() {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Alt komponentlər                                                          */
-/* -------------------------------------------------------------------------- */
-
-const TONES = {
-  violet: "bg-violet-50 text-violet-600",
-  sky: "bg-sky-50 text-sky-600",
-  emerald: "bg-emerald-50 text-emerald-600",
-  amber: "bg-amber-50 text-amber-600",
-} as const;
-
-type Tone = keyof typeof TONES;
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  hint,
-  tone,
-}: {
-  icon: typeof Layers;
-  label: string;
-  value: string;
-  hint: string;
-  tone: Tone;
-}) {
-  return (
-    <Card className="gap-0 rounded-xl border-slate-200 bg-white py-0 shadow-sm transition-shadow hover:shadow-md">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-2">
-          <p className="min-h-[30px] text-xs font-medium leading-tight text-slate-500">
-            {label}
-          </p>
-          <span
-            className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${TONES[tone]}`}
-          >
-            <Icon className="size-4" />
-          </span>
-        </div>
-        <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-          {value}
-        </p>
-        <p className="mt-1 truncate text-[11px] text-slate-400">{hint}</p>
-      </CardContent>
-    </Card>
-  );
-}

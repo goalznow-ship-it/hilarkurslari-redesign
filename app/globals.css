@@ -75,6 +75,16 @@
   --text-3xl--line-height: 1.25;
   --text-4xl: 1.75rem;
   --text-4xl--line-height: 1.25;
+  --text-5xl: 1.75rem;
+  --text-5xl--line-height: 1.25;
+  --text-6xl: 1.75rem;
+  --text-6xl--line-height: 1.25;
+  --text-7xl: 1.75rem;
+  --text-7xl--line-height: 1.25;
+  --text-8xl: 1.75rem;
+  --text-8xl--line-height: 1.25;
+  --text-9xl: 1.75rem;
+  --text-9xl--line-height: 1.25;
 
   /* --- Radius: 8 / 12 / 16 ------------------------------------------------ */
   --radius-sm: 8px;

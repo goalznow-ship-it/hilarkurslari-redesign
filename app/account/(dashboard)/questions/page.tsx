@@ -166,8 +166,8 @@ export default function QuestionsPage() {
       {/* ===== Səhifə başlığı ===== */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Suallar</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-xl font-bold text-neutral-900">Suallar</h1>
+          <p className="mt-1 text-sm text-neutral-500">
             Sual bankı — fənnə görə sualların siyahısı və redaktəsi
           </p>
         </div>
@@ -175,7 +175,7 @@ export default function QuestionsPage() {
         <div className="flex flex-wrap items-center gap-2">
           {/* Axtarış */}
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -201,7 +201,7 @@ export default function QuestionsPage() {
 
           <Button
             onClick={openNew}
-            className="gap-1.5 bg-[#4a1c2c] hover:bg-[#381420] text-white"
+            className="gap-1.5 bg-brand-700 hover:bg-brand-800 text-white"
           >
             <Plus className="size-4" />
             Yeni Sual
@@ -210,9 +210,9 @@ export default function QuestionsPage() {
       </div>
 
       {/* ===== Filtrlər paneli ===== */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <Filter className="size-4 text-slate-400" />
-        <span className="text-xs font-medium text-slate-500">Filtrlər:</span>
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
+        <Filter className="size-4 text-neutral-400" />
+        <span className="text-xs font-medium text-neutral-500">Filtrlər:</span>
 
         <Select value={gradeFilter} onValueChange={setGradeFilter}>
           <SelectTrigger className="h-8 w-36 text-xs">
@@ -252,7 +252,7 @@ export default function QuestionsPage() {
               setGradeFilter("all");
               setDifficultyFilter("all");
             }}
-            className="ml-auto text-xs text-slate-500"
+            className="ml-auto text-xs text-neutral-500"
           >
             Filtrləri sıfırla
           </Button>
@@ -261,8 +261,8 @@ export default function QuestionsPage() {
 
       {/* ===== Suallar grid ===== */}
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-          <p className="text-sm text-slate-500">
+        <div className="rounded-xl border border-neutral-200 bg-white p-12 text-center shadow-sm">
+          <p className="text-sm text-neutral-500">
             {questions.length === 0
               ? "Hələ sual yoxdur. “Yeni Sual” düyməsi ilə əlavə edin."
               : "Filtrə uyğun sual tapılmadı."}
@@ -273,13 +273,13 @@ export default function QuestionsPage() {
           {filtered.map((q) => (
             <Card
               key={q.id}
-              className="flex flex-col rounded-xl border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+              className="flex flex-col rounded-xl border-neutral-200 bg-white shadow-sm transition-shadow hover:shadow-md"
             >
               <CardContent className="flex flex-1 flex-col gap-3 p-5">
                 {/* Nişanlar */}
                 <div className="flex flex-wrap items-center gap-1.5">
                   {q.subject && (
-                    <Badge variant="default" className="bg-[#4a1c2c]">
+                    <Badge variant="default" className="bg-brand-700">
                       {q.subject}
                     </Badge>
                   )}
@@ -295,16 +295,16 @@ export default function QuestionsPage() {
                 </div>
 
                 {/* Sual mətni */}
-                <p className="line-clamp-2 text-base font-medium text-slate-900">
+                <p className="line-clamp-2 text-base font-medium text-neutral-900">
                   {q.text}
                 </p>
 
                 {/* Variantlar (qısa) */}
-                <ul className="space-y-1 text-xs text-slate-500">
+                <ul className="space-y-1 text-xs text-neutral-500">
                   {q.options.slice(0, 4).map((o, i) => (
                     <li
                       key={i}
-                      className={`truncate ${i === q.correct ? "font-semibold text-[#4a1c2c]" : ""}`}
+                      className={`truncate ${i === q.correct ? "font-semibold text-brand-700" : ""}`}
                     >
                       {String.fromCharCode(65 + i)}) {o}
                     </li>
@@ -312,12 +312,12 @@ export default function QuestionsPage() {
                 </ul>
 
                 {/* Əməliyyatlar */}
-                <div className="mt-auto flex items-center justify-end gap-1 border-t border-slate-100 pt-3">
+                <div className="mt-auto flex items-center justify-end gap-1 border-t border-neutral-100 pt-3">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => openEdit(q)}
-                    className="gap-1.5 text-slate-600 hover:text-[#4a1c2c]"
+                    className="gap-1.5 text-neutral-600 hover:text-brand-700"
                   >
                     <Pencil className="size-4" />
                     Redaktə et
@@ -326,7 +326,7 @@ export default function QuestionsPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(q.id)}
-                    className="gap-1.5 text-slate-400 hover:text-red-600"
+                    className="gap-1.5 text-neutral-400 hover:text-danger-fg"
                   >
                     <Trash2 className="size-4" />
                     Sil
@@ -425,7 +425,7 @@ export default function QuestionsPage() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-medium text-slate-500">
+              <p className="text-xs font-medium text-neutral-500">
                 Cavab variantları (düzgününü seçin):
               </p>
               <RadioGroup
@@ -438,10 +438,10 @@ export default function QuestionsPage() {
                 {form.options.map((opt, oi) => (
                   <div
                     key={oi}
-                    className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50/50 px-3 py-2"
+                    className="flex items-center gap-3 rounded-md border border-neutral-200 bg-neutral-50/50 px-3 py-2"
                   >
                     <RadioGroupItem value={String(oi)} id={`opt-${oi}`} />
-                    <span className="w-5 text-xs font-semibold text-slate-500">
+                    <span className="w-5 text-xs font-semibold text-neutral-500">
                       {String.fromCharCode(65 + oi)}
                     </span>
                     <Input
@@ -472,7 +472,7 @@ export default function QuestionsPage() {
               type="button"
               onClick={handleSave}
               disabled={!form.text.trim() || form.options.some((o) => !o.trim())}
-              className="bg-[#4a1c2c] hover:bg-[#381420] text-white"
+              className="bg-brand-700 hover:bg-brand-800 text-white"
             >
               Yadda Saxla
             </Button>

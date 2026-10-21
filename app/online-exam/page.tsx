@@ -117,7 +117,7 @@ export default function OnlineExamPage() {
 
   if (!exam) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-500">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-neutral-50 text-neutral-500">
         Yüklənir…
       </div>
     );
@@ -128,22 +128,22 @@ export default function OnlineExamPage() {
   const low = (remainSec ?? 0) < 60;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 md:px-6 py-3">
+    <div className="min-h-[100dvh] bg-neutral-50">
+      <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white px-4 md:px-6 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs text-gray-500 truncate">{exam.subject}</p>
-            <h1 className="text-sm md:text-base font-semibold text-gray-900 truncate">
+            <p className="text-xs text-neutral-500 truncate">{exam.subject}</p>
+            <h1 className="text-sm md:text-base font-semibold text-neutral-900 truncate">
               {exam.title}
             </h1>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <span className="text-xs text-gray-500 hidden md:inline">
+            <span className="text-xs text-neutral-500 hidden md:inline">
               {answeredCount}/{exam.questions.length} cavablandırılıb
             </span>
             <span
               className={`tabular-nums font-mono font-semibold px-3 py-1.5 rounded-md text-sm ${
-                low ? "bg-red-100 text-red-700 animate-pulse" : "bg-blue-50 text-blue-700"
+                low ? "bg-danger-soft text-danger-fg" : "bg-neutral-100 text-neutral-800"
               }`}
             >
               {remainSec !== null ? formatDuration(remainSec) : "--:--"}
@@ -156,8 +156,8 @@ export default function OnlineExamPage() {
         <div className="grid md:grid-cols-[220px_1fr] gap-6">
           {/* Suallar naviqasiyası */}
           <aside className="order-2 md:order-1">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <p className="text-xs font-medium text-gray-500 mb-3">Suallar</p>
+            <div className="bg-white border border-neutral-200 rounded-lg p-4">
+              <p className="text-xs font-medium text-neutral-500 mb-3">Suallar</p>
               <div className="grid grid-cols-8 md:grid-cols-5 gap-2">
                 {exam.questions.map((_, i) => (
                   <button
@@ -165,10 +165,10 @@ export default function OnlineExamPage() {
                     onClick={() => setCurrent(i)}
                     className={`h-9 rounded-md text-sm font-medium transition-colors ${
                       i === current
-                        ? "bg-blue-600 text-white"
+                        ? "bg-info text-white"
                         : answers[i] !== null
-                          ? "bg-green-100 text-green-800 hover:bg-green-200"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          ? "bg-success-soft text-success-fg hover:bg-success-soft"
+                          : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
                     }`}
                   >
                     {i + 1}
@@ -179,11 +179,11 @@ export default function OnlineExamPage() {
           </aside>
 
           {/* Aktiv sual */}
-          <section className="order-1 md:order-2 bg-white border border-gray-200 rounded-lg p-6 md:p-8">
-            <p className="text-sm text-gray-500 mb-2">
+          <section className="order-1 md:order-2 bg-white border border-neutral-200 rounded-lg p-6 md:p-8">
+            <p className="text-sm text-neutral-500 mb-2">
               Sual {current + 1} / {exam.questions.length}
             </p>
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">{q.text}</h2>
+            <h2 className="text-lg font-semibold text-neutral-900 mb-6">{q.text}</h2>
 
             <div className="space-y-3">
               {q.options.map((opt, i) => {
@@ -195,15 +195,15 @@ export default function OnlineExamPage() {
                     onClick={() =>
                       setAnswers((a) => a.map((v, idx) => (idx === current ? i : v)))
                     }
-                    className={`w-full text-left px-4 py-3 rounded-md border text-sm transition-colors ${
+                    className={`w-full rounded-md border px-4 py-3 text-left text-sm transition-colors duration-150 ${
                       selected
-                        ? "border-blue-600 bg-blue-50 text-blue-900 ring-1 ring-blue-600"
-                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800"
+                        ? "border-brand-600 bg-brand-50 text-brand-900 ring-1 ring-brand-600"
+                        : "border-neutral-200 text-neutral-800 hover:border-neutral-300 hover:bg-neutral-50"
                     }`}
                   >
                     <span
                       className={`inline-flex h-6 w-6 items-center justify-center rounded-full mr-3 text-xs font-semibold ${
-                        selected ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"
+                        selected ? "bg-brand-700 text-white" : "bg-neutral-100 text-neutral-600"
                       }`}
                     >
                       {String.fromCharCode(65 + i)}
@@ -218,7 +218,7 @@ export default function OnlineExamPage() {
               <button
                 onClick={() => setCurrent((c) => Math.max(0, c - 1))}
                 disabled={current === 0}
-                className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-4 py-2 rounded-md border border-neutral-300 text-sm font-medium text-neutral-700 bg-white hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ← Əvvəlki
               </button>
@@ -227,14 +227,14 @@ export default function OnlineExamPage() {
                   onClick={() =>
                     setCurrent((c) => Math.min(exam.questions.length - 1, c + 1))
                   }
-                  className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                  className="rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-800"
                 >
                   Sonrakı →
                 </button>
               ) : (
                 <button
                   onClick={() => setConfirmOpen(true)}
-                  className="px-4 py-2 rounded-md bg-green-600 text-white text-sm font-medium hover:bg-green-700"
+                  className="rounded-md bg-success px-4 py-2 text-sm font-medium text-white transition-colors hover:brightness-95"
                 >
                   İmtahanı bitir
                 </button>
@@ -245,7 +245,7 @@ export default function OnlineExamPage() {
 
         <button
           onClick={() => setConfirmOpen(true)}
-          className="fixed bottom-6 right-6 md:hidden px-5 py-3 rounded-full bg-green-600 text-white text-sm font-medium shadow-lg"
+          className="fixed right-6 bottom-6 rounded-full bg-success px-5 py-3 text-sm font-medium text-white shadow-md md:hidden"
         >
           Bitir
         </button>
@@ -253,29 +253,39 @@ export default function OnlineExamPage() {
 
       {/* Yekunlaşdırma təsdiqi */}
       {confirmOpen && (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">İmtahanı bitir?</h3>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-title"
+        >
+          <div className="w-full max-w-sm rounded-lg border border-neutral-200 bg-white p-6 shadow-lg">
+            <h3
+              id="confirm-title"
+              className="mb-2 text-base font-semibold text-neutral-900"
+            >
+              İmtahanı bitir?
+            </h3>
             {answeredCount < exam.questions.length ? (
-              <p className="text-sm text-red-600 mb-4">
+              <p className="mb-4 text-sm text-danger-fg">
                 Diqqət! {exam.questions.length - answeredCount} sual cavabsızdır.
               </p>
             ) : (
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="mb-4 text-sm text-neutral-600">
                 Bütün suallar cavablandırılıb. Təsdiq etdikdən sonra cavabları redaktə
                 etmək mümkün deyil.
               </p>
             )}
-            <div className="flex gap-3 justify-end">
+            <div className="flex justify-end gap-3">
               <button
                 onClick={() => setConfirmOpen(false)}
-                className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
               >
                 Davam et
               </button>
               <button
                 onClick={() => submit(false)}
-                className="px-4 py-2 rounded-md bg-green-600 text-white text-sm font-medium hover:bg-green-700"
+                className="rounded-md bg-success px-4 py-2 text-sm font-medium text-white transition-colors hover:brightness-95"
               >
                 Təsdiq — yekunlaşdır
               </button>

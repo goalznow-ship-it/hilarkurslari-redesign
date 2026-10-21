@@ -65,20 +65,31 @@ export function Button({
   ...props
 }: ButtonProps) {
   const Comp = asChild ? Slot : "button";
+  const classes = cn(
+    "inline-flex shrink-0 items-center justify-center whitespace-nowrap font-medium transition-[background-color,color,box-shadow,transform] duration-150 outline-none select-none",
+    "focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+    "disabled:pointer-events-none disabled:opacity-50",
+    "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+    buttonVariants[variant],
+    buttonSizes[size],
+    className,
+  );
+
+  // Slot tək uşaq element tələb edir — link variantında spinner render olunmur
+  if (asChild) {
+    return (
+      <Comp data-slot="button" aria-busy={loading || undefined} className={classes} {...props}>
+        {children}
+      </Comp>
+    );
+  }
+
   return (
     <Comp
       data-slot="button"
       aria-busy={loading || undefined}
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center whitespace-nowrap font-medium transition-[background-color,color,box-shadow,transform] duration-150 outline-none select-none",
-        "focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
-        "disabled:pointer-events-none disabled:opacity-50",
-        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        buttonVariants[variant],
-        buttonSizes[size],
-        className,
-      )}
-      disabled={asChild ? undefined : disabled || loading}
+      className={classes}
+      disabled={disabled || loading}
       {...props}
     >
       {loading && <Loader2 className="animate-spin" />}
@@ -626,15 +637,13 @@ export function StatCard({
       </div>
       <p className="tnum mt-2 text-xl font-semibold text-neutral-900">{value}</p>
       <div className="mt-1 flex min-h-5 items-center gap-2">
-        {typeof delta === "number" && (
+        {typeof delta === "number" && delta !== 0 && (
           <span
             className={cn(
               "tnum inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-semibold",
               delta > 0
                 ? "bg-success-soft text-success-fg"
-                : delta < 0
-                  ? "bg-danger-soft text-danger-fg"
-                  : "bg-neutral-100 text-neutral-500",
+                : "bg-danger-soft text-danger-fg",
             )}
           >
             {delta > 0 ? "+" : ""}

@@ -52,8 +52,8 @@ export default function ResultsClient({
       {/* Səhifə başlığı */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Nəticələr</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-xl font-semibold text-neutral-900">Nəticələr</h1>
+          <p className="text-sm text-neutral-500">
             {activeExam
               ? `${activeExam.title} — bütün nəticələr.`
               : "Bütün imtahan nəticələri — şagird, bal və vaxt üzrə."}
@@ -62,7 +62,7 @@ export default function ResultsClient({
         <select
           value={filterExamId}
           onChange={(e) => setManualExamId(e.target.value)}
-          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-[#4a1c2c] focus:ring-2 focus:ring-[#4a1c2c]/30"
+          className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 outline-none focus:border-brand-700 focus:ring-2 focus:ring-brand-700/30"
         >
           <option value="all">Bütün imtahanlar</option>
           {exams.map((exam) => (
@@ -74,52 +74,91 @@ export default function ResultsClient({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <p className="text-sm text-slate-500">Bu filtr üzrə nəticə yoxdur.</p>
+        <div className="rounded-lg border border-neutral-200 bg-white p-10 text-center shadow-xs">
+          <p className="text-sm text-neutral-500">Bu filtr üzrə nəticə yoxdur.</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
+        <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-xs">
+          {/* Mobil: kart görünüşü */}
+          <ul className="divide-y divide-neutral-100 md:hidden">
+            {filtered.map((r) => (
+              <li key={r.id} className="px-4 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-mono text-sm font-semibold text-neutral-900">
+                    {r.fin}
+                  </p>
+                  <span
+                    className={`tnum text-sm font-semibold ${
+                      r.score >= 50 ? "text-brand-700" : "text-danger-fg"
+                    }`}
+                  >
+                    {r.score}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-neutral-700">{r.examTitle}</p>
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                  <dt className="text-neutral-500">Düzgün cavab</dt>
+                  <dd className="tnum text-neutral-800">
+                    {r.correctCount}/{r.total}
+                  </dd>
+                  <dt className="text-neutral-500">Vaxt</dt>
+                  <dd className="tnum text-neutral-800">
+                    {Math.floor(r.timeSpentSec / 60)}:
+                    {String(r.timeSpentSec % 60).padStart(2, "0")}
+                  </dd>
+                  <dt className="text-neutral-500">Tarix</dt>
+                  <dd className="text-neutral-800">
+                    {formatDateTime(r.finishedAt)}
+                  </dd>
+                </dl>
+              </li>
+            ))}
+          </ul>
+
+          {/* Desktop: cədvəl */}
+          <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100 text-left text-xs text-slate-500">
-                <th className="px-6 py-3.5 font-medium">FİN</th>
-                <th className="px-4 py-3.5 font-medium">İmtahan</th>
-                <th className="px-4 py-3.5 font-medium">Düzgün</th>
-                <th className="px-4 py-3.5 font-medium">Bal</th>
-                <th className="px-4 py-3.5 font-medium">Vaxt</th>
-                <th className="px-6 py-3.5 font-medium">Tarix</th>
+              <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">
+                <th className="px-6 py-3 font-medium">FİN</th>
+                <th className="px-4 py-3 font-medium">İmtahan</th>
+                <th className="px-4 py-3 font-medium">Düzgün</th>
+                <th className="px-4 py-3 font-medium">Bal</th>
+                <th className="px-4 py-3 font-medium">Vaxt</th>
+                <th className="px-6 py-3 font-medium">Tarix</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-neutral-100">
               {filtered.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 font-mono font-medium text-slate-900">
+                <tr key={r.id} className="hover:bg-neutral-50">
+                  <td className="px-6 py-4 font-mono font-medium text-neutral-900">
                     {r.fin}
                   </td>
-                  <td className="px-4 py-4 text-slate-700">{r.examTitle}</td>
-                  <td className="px-4 py-4 text-slate-700">
+                  <td className="px-4 py-4 text-neutral-700">{r.examTitle}</td>
+                  <td className="tnum px-4 py-4 text-neutral-700">
                     {r.correctCount}/{r.total}
                   </td>
                   <td className="px-4 py-4">
                     <span
-                      className={`font-semibold ${
-                        r.score >= 50 ? "text-[#4a1c2c]" : "text-red-600"
+                      className={`tnum font-semibold ${
+                        r.score >= 50 ? "text-brand-700" : "text-danger-fg"
                       }`}
                     >
                       {r.score}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-slate-700 tabular-nums">
+                  <td className="tnum px-4 py-4 text-neutral-700">
                     {Math.floor(r.timeSpentSec / 60)}:
                     {String(r.timeSpentSec % 60).padStart(2, "0")}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-slate-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-neutral-500">
                     {formatDateTime(r.finishedAt)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

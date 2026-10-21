@@ -68,15 +68,15 @@ export default function OnlineExamsPage() {
       {/* ===== Səhifə başlığı ===== */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Onlayn İmtahanlar</h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-500">
+          <h1 className="text-xl font-bold text-neutral-900">Onlayn İmtahanlar</h1>
+          <p className="mt-1 max-w-2xl text-sm text-neutral-500">
             İmtahanı onlayn rejimdə aktivləşdirin, bilet satın və nəticələri
             izləyin. Şagird girişi /online-exam ünvanından FIN + bilet kodu ilə.
           </p>
         </div>
 
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -88,37 +88,107 @@ export default function OnlineExamsPage() {
       </div>
 
       {/* ===== Cədvəl ===== */}
-      <Card className="gap-0 rounded-xl border-slate-200 bg-white py-0 shadow-sm">
+      <Card className="gap-0 rounded-xl border-neutral-200 bg-white py-0 shadow-sm">
         <CardContent className="px-0 py-0">
           {filtered.length === 0 ? (
             <div className="px-6 py-14 text-center">
-              <span className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-slate-100">
-                <Wifi className="size-6 text-slate-400" />
+              <span className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-neutral-100">
+                <Wifi className="size-6 text-neutral-400" />
               </span>
-              <p className="text-sm font-medium text-slate-700">
+              <p className="text-sm font-medium text-neutral-700">
                 {exams.length === 0
                   ? "Hələ imtahan yoxdur"
                   : "Axtarışa uyğun imtahan tapılmadı"}
               </p>
               {exams.length === 0 && (
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-neutral-500">
                   Onlayn rejimdə idarə etmək üçün əvvəlcə imtahan yaradın.
                 </p>
               )}
               {exams.length === 0 && (
                 <Link
                   href="/account/exams/new"
-                  className="mt-5 inline-flex items-center gap-2 rounded-md bg-[#4a1c2c] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#381420]"
+                  className="mt-5 inline-flex items-center gap-2 rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-800"
                 >
                   Yeni İmtahan
                 </Link>
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              {/* Mobil: kart görünüşü */}
+              <ul className="divide-y divide-neutral-100 md:hidden">
+                {filtered.map((exam) => {
+                  const state = getOnlineState(exam);
+                  return (
+                    <li key={exam.id} className="px-4 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-neutral-900">
+                            {exam.title}
+                          </p>
+                          <p className="mt-0.5 font-mono text-xs text-neutral-400">
+                            {exam.code ?? "—"}
+                          </p>
+                        </div>
+                        <OnlineBadge state={state} />
+                      </div>
+                      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                        <dt className="text-neutral-500">Sinif</dt>
+                        <dd className="truncate text-neutral-800">
+                          {getClassBlock(exam)}
+                        </dd>
+                        <dt className="text-neutral-500">Bilet</dt>
+                        <dd className="tnum text-neutral-800">
+                          {exam.ticketCodes.length}
+                        </dd>
+                        <dt className="text-neutral-500">Bitirən</dt>
+                        <dd className="tnum text-neutral-800">
+                          {resultCount.get(exam.id) ?? 0}
+                        </dd>
+                      </dl>
+                      {exam.onlineEnabled && (
+                        <p className="mt-2 text-xs text-neutral-500">
+                          {formatDateTime(exam.startsAt)} —{" "}
+                          {formatDateTime(exam.endsAt)}
+                        </p>
+                      )}
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/account/exams/${exam.id}`}
+                          className="inline-flex items-center gap-1.5 rounded-md bg-brand-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-brand-800"
+                        >
+                          <Settings2 className="size-3.5" />
+                          İdarə et
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            alert("Tezliklə — biletlər bölməsi hazırlanır.")
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+                        >
+                          <Ticket className="size-3.5" />
+                          Biletlər
+                        </button>
+                        <Link
+                          href={`/account/results?examId=${exam.id}`}
+                          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+                        >
+                          <FileBarChart className="size-3.5" />
+                          Nəticələr
+                        </Link>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {/* Desktop: cədvəl */}
+              <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[1000px] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100 text-left text-xs text-slate-500">
+                  <tr className="border-b border-neutral-100 text-left text-xs text-neutral-500">
                     <th className="px-6 py-3.5 font-medium">İmtahan</th>
                     <th className="px-4 py-3.5 font-medium">Sinif</th>
                     <th className="px-4 py-3.5 font-medium">Onlayn vəziyyət</th>
@@ -130,23 +200,23 @@ export default function OnlineExamsPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-neutral-100">
                   {filtered.map((exam) => {
                     const state = getOnlineState(exam);
                     return (
-                      <tr key={exam.id} className="hover:bg-slate-50">
+                      <tr key={exam.id} className="hover:bg-neutral-50">
                         {/* İmtahan */}
                         <td className="px-6 py-4">
-                          <p className="font-semibold text-slate-900">
+                          <p className="font-semibold text-neutral-900">
                             {exam.title}
                           </p>
-                          <p className="mt-0.5 font-mono text-xs text-slate-400">
+                          <p className="mt-0.5 font-mono text-xs text-neutral-400">
                             {exam.code ?? "—"}
                           </p>
                         </td>
 
                         {/* Sinif */}
-                        <td className="px-4 py-4 text-slate-700">
+                        <td className="px-4 py-4 text-neutral-700">
                           {getClassBlock(exam)}
                         </td>
 
@@ -158,7 +228,7 @@ export default function OnlineExamsPage() {
                         {/* Giriş pəncərəsi */}
                         <td className="px-4 py-4">
                           {exam.onlineEnabled ? (
-                            <div className="text-xs leading-relaxed text-slate-600">
+                            <div className="text-xs leading-relaxed text-neutral-600">
                               <p className="tabular-nums">
                                 Başlanğıc: {formatDateTime(exam.startsAt)}
                               </p>
@@ -167,17 +237,17 @@ export default function OnlineExamsPage() {
                               </p>
                             </div>
                           ) : (
-                            <span className="text-slate-400">—</span>
+                            <span className="text-neutral-400">—</span>
                           )}
                         </td>
 
                         {/* Bilet */}
-                        <td className="px-4 py-4 text-slate-700 tabular-nums">
+                        <td className="px-4 py-4 text-neutral-700 tabular-nums">
                           {exam.ticketCodes.length}
                         </td>
 
                         {/* Bitirən */}
-                        <td className="px-4 py-4 text-slate-700 tabular-nums">
+                        <td className="px-4 py-4 text-neutral-700 tabular-nums">
                           {resultCount.get(exam.id) ?? 0}
                         </td>
 
@@ -186,7 +256,7 @@ export default function OnlineExamsPage() {
                           <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                             <Link
                               href={`/account/exams/${exam.id}`}
-                              className="inline-flex items-center gap-1.5 rounded-md bg-[#4a1c2c] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#381420]"
+                              className="inline-flex items-center gap-1.5 rounded-md bg-brand-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-brand-800"
                             >
                               <Settings2 className="size-3.5" />
                               İdarə et
@@ -196,14 +266,14 @@ export default function OnlineExamsPage() {
                               onClick={() =>
                                 alert("Tezliklə — biletlər bölməsi hazırlanır.")
                               }
-                              className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                              className="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
                             >
                               <Ticket className="size-3.5" />
                               Biletlər
                             </button>
                             <Link
                               href={`/account/results?examId=${exam.id}`}
-                              className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                              className="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
                             >
                               <FileBarChart className="size-3.5" />
                               Nəticələr
@@ -215,7 +285,8 @@ export default function OnlineExamsPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -251,7 +322,7 @@ function OnlineBadge({ state }: { state: OnlineState }) {
   }
   if (state === "ended") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-medium text-danger-fg">
         <Lock className="size-3.5" />
         Bağlıdır
       </span>
@@ -259,14 +330,14 @@ function OnlineBadge({ state }: { state: OnlineState }) {
   }
   if (state === "planned") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-medium text-warning-fg">
         <Activity className="size-3.5" />
         Gözləmədə
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">
       <CircleOff className="size-3.5" />
       Qurulmayıb
     </span>

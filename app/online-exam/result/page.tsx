@@ -27,7 +27,7 @@ function ResultContent() {
 
   if (result === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-500">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-neutral-50 text-neutral-500">
         Yüklənir…
       </div>
     );
@@ -35,12 +35,12 @@ function ResultContent() {
 
   if (!result) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-neutral-50 px-4">
         <div className="text-center">
-          <p className="text-gray-600 mb-4">Nəticə tapılmadı.</p>
+          <p className="text-neutral-600 mb-4">Nəticə tapılmadı.</p>
           <Link
             href="/"
-            className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+            className="px-4 py-2 rounded-md bg-info text-white text-sm font-medium hover:bg-info"
           >
             Ana səhifəyə qayıt
           </Link>
@@ -52,64 +52,64 @@ function ResultContent() {
   const passed = result.score >= 50;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-[100dvh] bg-neutral-50">
       <main className="max-w-2xl mx-auto px-4 py-10">
         {auto && (
-          <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mb-6 rounded-md border border-warning/25 bg-warning-soft px-4 py-3 text-sm text-warning-fg">
             Baxış vaxtı bitdiyi üçün imtahan avtomatik yekunlaşdırıldı.
           </div>
         )}
 
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-gray-200 text-center">
-            <p className="text-sm text-gray-500">Sizin nəticə</p>
+        <div className="bg-white border border-neutral-200 rounded-lg shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-neutral-200 text-center">
+            <p className="text-sm text-neutral-500">Sizin nəticə</p>
             <p
-              className={`text-5xl font-bold mt-2 ${
-                passed ? "text-green-600" : "text-red-600"
+              className={`text-xl font-bold mt-2 ${
+                passed ? "text-success-fg" : "text-danger-fg"
               }`}
             >
               {result.score}
-              <span className="text-2xl text-gray-400"> /100</span>
+              <span className="text-xl text-neutral-400"> /100</span>
             </p>
-            <p className="mt-2 text-sm font-medium text-gray-700">{result.examTitle}</p>
+            <p className="mt-2 text-sm font-medium text-neutral-700">{result.examTitle}</p>
           </div>
 
-          <dl className="grid grid-cols-2 gap-px bg-gray-100 text-sm">
+          <dl className="grid grid-cols-2 gap-px bg-neutral-100 text-sm">
             <div className="bg-white px-6 py-4">
-              <dt className="text-gray-500 text-xs">FİN kod</dt>
-              <dd className="mt-1 font-mono font-semibold text-gray-900">{result.fin}</dd>
+              <dt className="text-neutral-500 text-xs">FİN kod</dt>
+              <dd className="mt-1 font-mono font-semibold text-neutral-900">{result.fin}</dd>
             </div>
             <div className="bg-white px-6 py-4">
-              <dt className="text-gray-500 text-xs">Bilet kodu</dt>
-              <dd className="mt-1 font-mono font-semibold text-gray-900">
+              <dt className="text-neutral-500 text-xs">Bilet kodu</dt>
+              <dd className="mt-1 font-mono font-semibold text-neutral-900">
                 {result.ticketCode}
               </dd>
             </div>
             <div className="bg-white px-6 py-4">
-              <dt className="text-gray-500 text-xs">Düzgün cavab</dt>
-              <dd className="mt-1 font-semibold text-gray-900">
+              <dt className="text-neutral-500 text-xs">Düzgün cavab</dt>
+              <dd className="mt-1 font-semibold text-neutral-900">
                 {result.correctCount} / {result.total}
               </dd>
             </div>
             <div className="bg-white px-6 py-4">
-              <dt className="text-gray-500 text-xs">Sərf etdiyiniz vaxt</dt>
-              <dd className="mt-1 font-semibold text-gray-900 tabular-nums">
+              <dt className="text-neutral-500 text-xs">Sərf etdiyiniz vaxt</dt>
+              <dd className="mt-1 font-semibold text-neutral-900 tabular-nums">
                 {formatDuration(result.timeSpentSec)}
               </dd>
             </div>
             <div className="bg-white px-6 py-4">
-              <dt className="text-gray-500 text-xs">Başlama vaxtı</dt>
-              <dd className="mt-1 text-gray-900">{formatDateTime(result.startedAt)}</dd>
+              <dt className="text-neutral-500 text-xs">Başlama vaxtı</dt>
+              <dd className="mt-1 text-neutral-900">{formatDateTime(result.startedAt)}</dd>
             </div>
             <div className="bg-white px-6 py-4">
-              <dt className="text-gray-500 text-xs">Bitirmə vaxtı</dt>
-              <dd className="mt-1 text-gray-900">{formatDateTime(result.finishedAt)}</dd>
+              <dt className="text-neutral-500 text-xs">Bitirmə vaxtı</dt>
+              <dd className="mt-1 text-neutral-900">{formatDateTime(result.finishedAt)}</dd>
             </div>
           </dl>
         </div>
 
         {/* Sualların təhlili */}
-        <h2 className="mt-8 mb-4 text-lg font-semibold text-gray-900">Sualların təhlili</h2>
+        <h2 className="mt-8 mb-4 text-lg font-semibold text-neutral-900">Sualların təhlili</h2>
         <div className="space-y-3">
           {result.answers.map((given, i) => {
             const q = exam?.questions[i];
@@ -118,15 +118,15 @@ function ResultContent() {
               <div
                 key={i}
                 className={`rounded-md border px-4 py-3 text-sm ${
-                  isCorrect ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"
+                  isCorrect ? "border-success/25 bg-success-soft" : "border-danger/25 bg-danger-soft"
                 }`}
               >
                 {q ? (
                   <>
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-neutral-900">
                       {i + 1}. {q.text}
                     </p>
-                    <p className="mt-1 text-gray-700">
+                    <p className="mt-1 text-neutral-700">
                       Cavabınız:{" "}
                       <span className="font-medium">
                         {given !== null
@@ -135,7 +135,7 @@ function ResultContent() {
                       </span>
                     </p>
                     {!isCorrect && (
-                      <p className="mt-0.5 text-green-700">
+                      <p className="mt-0.5 text-success-fg">
                         Düzgün cavab:{" "}
                         <span className="font-medium">
                           {String.fromCharCode(65 + q.correct)}) {q.options[q.correct]}
@@ -144,7 +144,7 @@ function ResultContent() {
                     )}
                   </>
                 ) : (
-                  <span className="text-gray-800">
+                  <span className="text-neutral-800">
                     Sual {i + 1}:{" "}
                     <span className="font-medium">
                       {isCorrect ? "Düzgün" : given === null ? "Cavabsız" : "Səhv"}
@@ -164,7 +164,7 @@ export default function ResultPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-500">
+        <div className="flex min-h-[100dvh] items-center justify-center bg-neutral-50 text-neutral-500">
           Yüklənir…
         </div>
       }

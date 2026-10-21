@@ -159,7 +159,7 @@ export default function ExamEntryPage() {
       <aside className="hidden flex-col justify-between bg-brand-800 p-12 text-white lg:flex">
         <div>
           <Image
-            src="/hilal-logo.png"
+            src="/hilal-logo-light.png"
             alt="Hilal Kursları"
             width={768}
             height={240}

@@ -24,7 +24,7 @@ export default function EditExamClient({ id }: { id: string }) {
 
   if (exam === "loading") {
     return (
-      <div className="flex h-64 items-center justify-center text-slate-500">
+      <div className="flex h-64 items-center justify-center text-neutral-500">
         Yüklənir…
       </div>
     );
@@ -32,11 +32,11 @@ export default function EditExamClient({ id }: { id: string }) {
 
   if (!exam) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-        <p className="text-slate-600 mb-4">İmtahan tapılmadı.</p>
+      <div className="rounded-xl border border-neutral-200 bg-white p-10 text-center shadow-sm">
+        <p className="text-neutral-600 mb-4">İmtahan tapılmadı.</p>
         <Link
           href="/account/exams"
-          className="inline-flex items-center gap-2 rounded-md bg-[#4a1c2c] px-4 py-2 text-sm font-medium text-white hover:bg-[#381420] transition-colors"
+          className="inline-flex items-center gap-2 rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800 transition-colors"
         >
           İmtahanlar siyahısına qayıt
         </Link>
@@ -48,8 +48,8 @@ export default function EditExamClient({ id }: { id: string }) {
     <div className="space-y-6">
       {/* Səhifə başlığı */}
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">{exam.title}</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-xl font-semibold text-neutral-900">{exam.title}</h1>
+        <p className="text-sm text-neutral-500">
           İmtahan məlumatlarını və suallarını redaktə edin.
         </p>
       </div>

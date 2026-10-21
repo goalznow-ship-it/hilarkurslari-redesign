@@ -246,7 +246,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
       {errors.length > 0 && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-md border border-danger/25 bg-danger-soft px-4 py-3 text-sm text-danger-fg">
           <ul className="list-disc list-inside space-y-1">
             {errors.map((err, i) => (
               <li key={i}>{err}</li>
@@ -256,9 +256,9 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
       )}
 
       {/* ===== Əsas məlumatlar ===== */}
-      <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
+      <Card className="rounded-xl border-neutral-200 bg-white shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base text-[#4a1c2c]">
+          <CardTitle className="text-base text-brand-700">
             Əsas məlumatlar
           </CardTitle>
         </CardHeader>
@@ -326,7 +326,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
               />
             </div>
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-neutral-500">
             İmtahan yalnız başlanğıc və bitmə tarixi aralığında şagirdlər üçün
             açıq olur. Bilet kodları sahəsi boş olarsa, istənilən keçərli
             formatlı kod qəbul edilir.
@@ -335,9 +335,9 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
       </Card>
 
       {/* ===== Kitabça məlumatları ===== */}
-      <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
+      <Card className="rounded-xl border-neutral-200 bg-white shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base text-[#4a1c2c]">
+          <CardTitle className="text-base text-brand-700">
             Kitabça məlumatları
           </CardTitle>
         </CardHeader>
@@ -435,7 +435,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
             </div>
           </div>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-slate-50/60 px-3.5 py-3">
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-neutral-200 bg-neutral-50/60 px-3.5 py-3">
             <Checkbox
               checked={state.onlineEnabled}
               onCheckedChange={(v) =>
@@ -444,10 +444,10 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
               className="mt-0.5"
             />
             <span className="min-w-0">
-              <span className="block text-sm font-medium text-slate-800">
+              <span className="block text-sm font-medium text-neutral-800">
                 Onlayn aktiv
               </span>
-              <span className="block text-xs text-slate-500">
+              <span className="block text-xs text-neutral-500">
                 İmtahan onlayn rejimdə aktivləşdirilir — şagirdlər
                 /online-exam səhifəsindən FIN və bilet kodu ilə daxil olmaq mümkündür.
               </span>
@@ -459,7 +459,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
       {/* ===== Suallar ===== */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-slate-900">
+          <h2 className="text-base font-semibold text-neutral-900">
             Suallar ({questions.length})
           </h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -489,7 +489,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
                 </DialogHeader>
 
                 {bankQuestions.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-slate-500">
+                  <p className="py-6 text-center text-sm text-neutral-500">
                     Sual bankı boşdur. Sual kartındakı bookmark ikonu ilə sualları
                     banka əlavə edə bilərsiniz.
                   </p>
@@ -502,8 +502,8 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
                           key={q.id}
                           className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors ${
                             checked
-                              ? "border-[#4a1c2c]/40 bg-[#4a1c2c]/5"
-                              : "border-slate-200 hover:bg-slate-50"
+                              ? "border-brand-700/40 bg-brand-700/5"
+                              : "border-neutral-200 hover:bg-neutral-50"
                           }`}
                         >
                           <Checkbox
@@ -512,10 +512,10 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
                             className="mt-0.5"
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-slate-900">
+                            <p className="text-sm font-medium text-neutral-900">
                               {q.text || "— mətnsiz sual —"}
                             </p>
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="mt-1 text-xs text-neutral-500">
                               {q.options.map((o, i) => (
                                 <span key={i} className="mr-2">
                                   {String.fromCharCode(65 + i)}) {o}
@@ -541,7 +541,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
                     type="button"
                     onClick={handleAddSelected}
                     disabled={selectedBankIds.length === 0}
-                    className="bg-[#4a1c2c] hover:bg-[#381420] text-white"
+                    className="bg-brand-700 hover:bg-brand-800 text-white"
                   >
                     Seçilmişləri əlavə et ({selectedBankIds.length})
                   </Button>
@@ -554,10 +554,10 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
         {questions.map((q, qi) => (
           <Card
             key={q.id}
-            className="relative rounded-xl border-slate-200 bg-white shadow-sm"
+            className="relative rounded-xl border-neutral-200 bg-white shadow-sm"
           >
             <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold text-[#4a1c2c]">
+              <CardTitle className="text-sm font-semibold text-brand-700">
                 Sual {qi + 1}
               </CardTitle>
               <div className="flex items-center gap-1">
@@ -567,7 +567,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
                   size="icon"
                   onClick={() => addBankQuestion(q)}
                   title="Sualı banka əlavə et"
-                  className="text-slate-400 hover:text-[#4a1c2c]"
+                  className="text-neutral-400 hover:text-brand-700"
                 >
                   <Bookmark className="size-4" />
                 </Button>
@@ -578,7 +578,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
                   onClick={() => removeQuestion(q.id)}
                   disabled={questions.length <= 1}
                   title="Sualı sil"
-                  className="text-slate-400 hover:text-red-600"
+                  className="text-neutral-400 hover:text-danger-fg"
                 >
                   <Trash2 className="size-4" />
                 </Button>
@@ -597,7 +597,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs font-medium text-slate-500">
+                <p className="text-xs font-medium text-neutral-500">
                   Cavab variantları (düzgününü seçin):
                 </p>
                 <RadioGroup
@@ -608,13 +608,13 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
                   {q.options.map((opt, oi) => (
                     <div
                       key={oi}
-                      className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50/50 px-3 py-2"
+                      className="flex items-center gap-3 rounded-md border border-neutral-200 bg-neutral-50/50 px-3 py-2"
                     >
                       <RadioGroupItem
                         value={String(oi)}
                         id={`q-${q.id}-opt-${oi}`}
                       />
-                      <span className="w-5 text-xs font-semibold text-slate-500">
+                      <span className="w-5 text-xs font-semibold text-neutral-500">
                         {String.fromCharCode(65 + oi)}
                       </span>
                       <Input
@@ -636,7 +636,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
       <div className="sticky bottom-4 z-20 flex justify-end pt-2">
         <Button
           type="submit"
-          className="gap-2 bg-[#4a1c2c] hover:bg-[#381420] text-white shadow-lg"
+          className="gap-2 bg-brand-700 hover:bg-brand-800 text-white shadow-lg"
         >
           Yadda Saxla və Dərc Et
         </Button>

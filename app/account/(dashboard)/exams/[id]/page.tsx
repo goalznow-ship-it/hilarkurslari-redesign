@@ -9,7 +9,7 @@ export default function EditExamPage({
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-500">
+        <div className="flex min-h-screen items-center justify-center bg-neutral-50 text-neutral-500">
           Yüklənir…
         </div>
       }

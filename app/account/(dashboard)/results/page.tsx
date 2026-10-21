@@ -9,7 +9,7 @@ export default function ResultsPage({
   return (
     <Suspense
       fallback={
-        <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+        <div className="flex h-64 items-center justify-center text-sm text-neutral-500">
           Yüklənir…
         </div>
       }

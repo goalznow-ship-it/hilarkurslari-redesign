@@ -12,7 +12,6 @@ import {
   FileX,
   GraduationCap,
   Layers,
-  PlayCircle,
   Plus,
   Search,
   Trash2,
@@ -84,8 +83,8 @@ export default function ExamsPage() {
       {/* ===== Səhifə başlığı ===== */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">İmtahanlar</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-xl font-bold text-neutral-900">İmtahanlar</h1>
+          <p className="mt-1 text-sm text-neutral-500">
             Kitabça hazırlığı və idarəsi
           </p>
         </div>
@@ -93,7 +92,7 @@ export default function ExamsPage() {
         <div className="flex flex-wrap items-center gap-2">
           {/* Axtarış */}
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -103,16 +102,9 @@ export default function ExamsPage() {
             />
           </div>
 
-          <Button variant="outline" asChild className="gap-1.5">
-            <Link href="/">
-              <PlayCircle className="size-4" />
-              İmtahana başlama səhifəsi
-            </Link>
-          </Button>
-
           <Button
             asChild
-            className="gap-1.5 bg-[#4a1c2c] text-white hover:bg-[#381420]"
+            className="gap-1.5 bg-brand-700 text-white hover:bg-brand-800"
           >
             <Link href="/account/exams/new">
               <Plus className="size-4" />
@@ -124,24 +116,24 @@ export default function ExamsPage() {
 
       {/* ===== Kart grid ===== */}
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-          <span className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-slate-100">
-            <ClipboardList className="size-6 text-slate-400" />
+        <div className="rounded-xl border border-neutral-200 bg-white p-12 text-center shadow-sm">
+          <span className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-neutral-100">
+            <ClipboardList className="size-6 text-neutral-400" />
           </span>
-          <p className="text-sm font-medium text-slate-700">
+          <p className="text-sm font-medium text-neutral-700">
             {exams.length === 0
               ? "Hələ imtahan yoxdur"
               : "Axtarışa uyğun imtahan tapılmadı"}
           </p>
           {exams.length === 0 && (
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-neutral-500">
               İlk kitabçanı yaratmaq üçün yeni imtahan əlavə edin.
             </p>
           )}
           {exams.length === 0 && (
             <Button
               asChild
-              className="mt-5 gap-1.5 bg-[#4a1c2c] text-white hover:bg-[#381420]"
+              className="mt-5 gap-1.5 bg-brand-700 text-white hover:bg-brand-800"
             >
               <Link href="/account/exams/new">
                 <Plus className="size-4" />
@@ -187,15 +179,15 @@ function ExamCard({
   const variants = exam.variants ?? 1;
 
   return (
-    <Card className="group relative gap-0 rounded-xl border-slate-200 bg-white py-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+    <Card className="group relative gap-0 rounded-xl border-neutral-200 bg-white py-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md">
       <CardContent className="flex h-full flex-col p-5">
         {/* Başlıq + rozet */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="line-clamp-2 min-h-[44px] text-base font-bold leading-snug text-slate-900">
+            <h2 className="line-clamp-2 min-h-[44px] text-base font-bold leading-snug text-neutral-900">
               {exam.title}
             </h2>
-            <p className="mt-0.5 font-mono text-xs text-slate-400">
+            <p className="mt-0.5 font-mono text-xs text-neutral-400">
               {exam.code ?? "—"}
             </p>
           </div>
@@ -207,7 +199,7 @@ function ExamCard({
               onClick={onDelete}
               title="İmtahanı sil"
               aria-label={`${exam.title} imtahanını sil`}
-              className="card-action rounded-md p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:opacity-100 focus-visible:outline-none"
+              className="card-action rounded-md p-1.5 text-neutral-400 transition-colors hover:bg-danger-soft hover:text-danger-fg focus-visible:opacity-100 focus-visible:outline-none"
             >
               <Trash2 className="size-4" />
             </button>
@@ -224,16 +216,16 @@ function ExamCard({
 
         {/* Meta məlumatlar */}
         <dl className="mt-4 space-y-2 text-sm">
-          <div className="flex items-center gap-2 text-slate-600">
-            <GraduationCap className="size-4 shrink-0 text-slate-400" />
+          <div className="flex items-center gap-2 text-neutral-600">
+            <GraduationCap className="size-4 shrink-0 text-neutral-400" />
             <span className="truncate">{classBlock}</span>
           </div>
-          <div className="flex items-center gap-2 text-slate-600">
-            <CalendarRange className="size-4 shrink-0 text-slate-400" />
+          <div className="flex items-center gap-2 text-neutral-600">
+            <CalendarRange className="size-4 shrink-0 text-neutral-400" />
             <span className="truncate">{year}</span>
           </div>
-          <div className="flex items-center gap-2 text-slate-600">
-            <Layers className="size-4 shrink-0 text-slate-400" />
+          <div className="flex items-center gap-2 text-neutral-600">
+            <Layers className="size-4 shrink-0 text-neutral-400" />
             <span className="truncate">
               {variants} {variants === 1 ? "variant" : "variant"}
             </span>
@@ -243,7 +235,7 @@ function ExamCard({
         {/* PDF vəziyyəti */}
         <p
           className={`mt-4 flex items-center gap-1.5 text-xs font-medium ${
-            exam.pdfReady ? "text-emerald-600" : "text-slate-400"
+            exam.pdfReady ? "text-emerald-600" : "text-neutral-400"
           }`}
         >
           {exam.pdfReady ? (
@@ -260,19 +252,19 @@ function ExamCard({
         </p>
 
         {/* Əməliyyatlar */}
-        <div className="mt-auto flex items-center gap-2 border-t border-slate-100 pt-4">
+        <div className="mt-auto flex items-center gap-2 border-t border-neutral-100 pt-4">
           <Button
             type="button"
             variant="secondary"
             onClick={onCopy}
-            className="gap-1.5 text-slate-700"
+            className="gap-1.5 text-neutral-700"
           >
             <Copy className="size-4" />
             Kopyala
           </Button>
           <Button
             asChild
-            className="ml-auto gap-1.5 bg-[#4a1c2c] text-white hover:bg-[#381420]"
+            className="ml-auto gap-1.5 bg-brand-700 text-white hover:bg-brand-800"
           >
             <Link href={`/account/exams/${exam.id}`}>
               Aç

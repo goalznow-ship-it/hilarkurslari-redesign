@@ -637,7 +637,7 @@ export default function AdminDashboardPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={chartData}
-                    margin={{ top: 8, right: 4, left: -20, bottom: 0 }}
+                    margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
                     barCategoryGap="14%"
                   >
                     <CartesianGrid
@@ -655,7 +655,7 @@ export default function AdminDashboardPage() {
                     />
                     <YAxis
                       allowDecimals={false}
-                      width={36}
+                      width={28}
                       tickLine={false}
                       axisLine={false}
                       tick={{ fontSize: 11, fill: "var(--color-neutral-500)" }}
