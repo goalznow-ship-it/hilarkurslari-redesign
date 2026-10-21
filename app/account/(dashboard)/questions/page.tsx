@@ -229,7 +229,7 @@ export default function QuestionsPage() {
         </Select>
 
         <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-          <SelectTrigger className="h-8 w-32 text-xs">
+          <SelectTrigger className="h-8 w-36 text-xs">
             <SelectValue placeholder="Çətinlik" />
           </SelectTrigger>
           <SelectContent>

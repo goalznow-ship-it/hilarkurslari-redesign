@@ -193,7 +193,9 @@ export function Field({
           {error}
         </p>
       ) : hint ? (
-        <p className="text-xs text-neutral-500">{hint}</p>
+        <p id={htmlFor ? `${htmlFor}-hint` : undefined} className="text-xs text-neutral-500">
+          {hint}
+        </p>
       ) : null}
     </div>
   );

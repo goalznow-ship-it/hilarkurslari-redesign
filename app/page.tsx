@@ -268,7 +268,7 @@ export default function ExamEntryPage() {
                 maxLength={7}
                 placeholder="AB12CD3"
                 aria-invalid={Boolean(errors.fin)}
-                aria-describedby={errors.fin ? "fin-error" : undefined}
+                aria-describedby={errors.fin ? "fin-error" : "fin-hint"}
                 value={fin}
                 onChange={(e) => onFinChange(e.target.value)}
                 className="h-11 text-base"
@@ -290,7 +290,7 @@ export default function ExamEntryPage() {
                 maxLength={9}
                 placeholder="A1B2-C3D4"
                 aria-invalid={Boolean(errors.ticket)}
-                aria-describedby={errors.ticket ? "ticket-error" : undefined}
+                aria-describedby={errors.ticket ? "ticket-error" : "ticket-hint"}
                 value={ticket}
                 onChange={(e) => onTicketChange(e.target.value)}
                 onPaste={(e) => {
