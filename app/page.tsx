@@ -1,17 +1,46 @@
 "use client";
 
+import React, { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import type { Exam } from "@/lib/types";
+import { ArrowRight, BookOpen, Info, Lock, User } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import {
   findResultByParticipant,
   getExams,
   initStore,
   setEntry,
 } from "@/lib/store";
-import { examStatus, isValidFin, isValidTicket, normalizeFin, normalizeTicket } from "@/lib/helpers";
+import {
+  examStatus,
+  isValidFin,
+  isValidTicket,
+  normalizeFin,
+  normalizeTicket,
+} from "@/lib/helpers";
+import type { Exam } from "@/lib/types";
 
-export default function Home() {
+export default function ExamEntryPage() {
   const router = useRouter();
   const [exams, setExams] = useState<Exam[] | null>(null);
   const [examId, setExamId] = useState("");
@@ -28,20 +57,22 @@ export default function Home() {
     return () => clearTimeout(t);
   }, []);
 
-  const activeExams = useMemo(() => exams ?? [], [exams]);
-  const selectedExam = activeExams.find((e) => e.id === examId) ?? null;
-
-  const handleFinChange = (v: string) => {
-    setFin(v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7));
+  // FİN: yalnız böyük hərf + rəqəm, maks. 7 simvol
+  const handleFinChange = (value: string) => {
+    setFin(value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7));
   };
 
-  const handleTicketChange = (v: string) => {
-    setTicket(normalizeTicket(v));
+  // Bilet: yalnız böyük hərf + rəqəm, XXXX-XXXX maskesi
+  const handleTicketChange = (value: string) => {
+    setTicket(normalizeTicket(value));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const selectedExam = exams?.find((e) => e.id === examId) ?? null;
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
+    setExistingResultId(null);
 
     if (!selectedExam) {
       setError("Zəhmət olmasa, imtahan seçin.");
@@ -86,118 +117,140 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans antialiased">
-      <nav className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-        <div className="flex items-center gap-3">
-          <img src="/logo.svg" alt="Kitabça Sistemi" className="h-9 w-9 rounded-lg" />
-          <h1 className="text-xl font-bold text-gray-900">Kitabça Sistemi</h1>
-        </div>
-        <a
-          href="/account/login"
-          className="hidden md:inline-block px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
-        >
-          Panel Girişi
-        </a>
-      </nav>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 px-4 py-10">
+      {/* Brend loqosu */}
+      <Image
+        src="/hilal-logo.png"
+        alt="Hilal Kursları"
+        width={200}
+        height={63}
+        priority
+        className="w-[180px] md:w-[200px] h-auto mb-8"
+      />
 
-      <main className="max-w-4xl mx-auto py-12 px-4">
-        <div className="bg-white rounded-lg p-8 md:p-10 max-w-2xl mx-auto border border-gray-200 shadow-sm">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">3 addımda imtahana giriş</h2>
-          <p className="mb-6 text-gray-500">
+      <Card className="w-full max-w-md shadow-lg rounded-xl">
+        <CardHeader>
+          <CardTitle className="text-[#4a1c2c]">İmtahana Giriş</CardTitle>
+          <CardDescription>
             Yalnız hazırda açıq olan imtahanlar sizə göstərilir.
-          </p>
+          </CardDescription>
+        </CardHeader>
 
-          <form onSubmit={handleSubmit} noValidate>
-            <div className="space-y-4">
-              {/* Step 1: Select exam */}
-              <div>
-                <label htmlFor="exam" className="block text-sm font-medium text-gray-700 mb-2">
-                  1. İmtahanı seçin
-                </label>
-                <select
-                  id="exam"
-                  value={examId}
-                  onChange={(e) => setExamId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="" disabled>
-                    {activeExams.length === 0
-                      ? "Hazırda açıq imtahan yoxdur"
-                      : "İmtahan seçin"}
-                  </option>
-                  {activeExams.map((ex) => (
-                    <option key={ex.id} value={ex.id}>
-                      {ex.title} ({ex.durationMin} dəq)
-                    </option>
+        <CardContent>
+          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+            {/* 1. İmtahan seçimi */}
+            <div className="grid gap-2">
+              <Label htmlFor="exam" className="text-[#4a1c2c]">
+                <BookOpen className="h-3.5 w-3.5" />
+                İmtahanı seçin
+              </Label>
+              <Select value={examId} onValueChange={setExamId} disabled={exams === null}>
+                <SelectTrigger id="exam" className="w-full">
+                  <SelectValue
+                    placeholder={
+                      exams === null
+                        ? "Yüklənir…"
+                        : (exams ?? []).length === 0
+                          ? "Hazırda açıq imtahan yoxdur"
+                          : "İmtahan seçin"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {(exams ?? []).map((exam) => (
+                    <SelectItem key={exam.id} value={exam.id}>
+                      {exam.title} ({exam.durationMin} dəq)
+                    </SelectItem>
                   ))}
-                </select>
-              </div>
+                </SelectContent>
+              </Select>
+            </div>
 
-              {/* Step 2: FIN code */}
-              <div>
-                <label htmlFor="fin" className="block text-sm font-medium text-gray-700 mb-2">
-                  2. FİN kodunuzu yazın
-                </label>
-                <input
-                  id="fin"
-                  type="text"
-                  value={fin}
-                  onChange={(e) => handleFinChange(e.target.value)}
-                  placeholder="Şəxsiyyət vəsiqənizdəki 7 simvol"
-                  maxLength={7}
-                  autoComplete="off"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md uppercase tracking-widest focus outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+            {/* 2. FİN kod */}
+            <div className="grid gap-2">
+              <Label htmlFor="fin" className="text-[#4a1c2c]">
+                <User className="h-3.5 w-3.5" />
+                FİN kod
+              </Label>
+              <Input
+                id="fin"
+                type="text"
+                inputMode="text"
+                maxLength={7}
+                autoComplete="off"
+                placeholder="Şəxsiyyət vəsiqənizdəki 7 simvollu FİN kod"
+                value={fin}
+                onChange={(e) => handleFinChange(e.target.value)}
+                className="w-full uppercase tracking-widest bg-white"
+              />
+            </div>
 
-              {/* Step 3: Ticket code */}
-              <div>
-                <label htmlFor="ticket" className="block text-sm font-medium text-gray-700 mb-2">
-                  3. Bilet kodunu daxil edin
-                </label>
-                <input
-                  id="ticket"
-                  type="text"
-                  value={ticket}
-                  onChange={(e) => handleTicketChange(e.target.value)}
-                  placeholder="XXXX-XXXX"
-                  maxLength={9}
-                  autoComplete="off"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md uppercase tracking-widest focus outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+            {/* 3. Bilet kodu */}
+            <div className="grid gap-2">
+              <Label htmlFor="ticket" className="text-[#4a1c2c]">
+                <Lock className="h-3.5 w-3.5" />
+                Bilet kodu
+              </Label>
+              <Input
+                id="ticket"
+                type="text"
+                maxLength={9}
+                autoComplete="off"
+                placeholder="XXXX-XXXX"
+                value={ticket}
+                onChange={(e) => handleTicketChange(e.target.value)}
+                className="w-full uppercase tracking-widest bg-white"
+              />
             </div>
 
             {error && (
-              <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div
+                role="alert"
+                className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              >
                 {error}{" "}
                 {existingResultId && (
-                  <a
+                  <Link
                     href={`/online-exam/result?rid=${existingResultId}`}
                     className="font-medium underline underline-offset-2"
                   >
                     Nəticəyə bax
-                  </a>
+                  </Link>
                 )}
               </div>
             )}
 
-            <button
+            {/* Giriş düyməsi */}
+            <Button
               type="submit"
+              className="w-full bg-[#4a1c2c] hover:bg-[#381420] text-white h-11 text-base"
               disabled={exams === null}
-              className="w-full mt-6 py-3 px-4 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               İmtahana daxil ol
-            </button>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </form>
-        </div>
+        </CardContent>
 
-        <p className="mt-6 max-w-2xl mx-auto text-center text-xs text-gray-400">
-          Demo versiya: məlumatlar brauzer yaddaşında saxlanılır. Bilet kodu
-          XXXX-XXXX formatında istənilən kod qəbul edilir (admin tərəfdən qeyd
-          olunmadıqda).
-        </p>
-      </main>
+        <CardFooter>
+          <div className="flex items-start gap-2 rounded-md border border-[#4a1c2c]/10 bg-[#4a1c2c]/5 px-3 py-2.5 text-xs text-muted-foreground w-full">
+            <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[#4a1c2c]/60" />
+            <p className="leading-relaxed">
+              Demo versiya: məlumatlar brauzer yaddaşında saxlanılır. Bilet kodu
+              XXXX-XXXX formatında istənilən kod qəbul edilir (admin tərəfindən
+              qeyd olunmadıqda).
+            </p>
+          </div>
+        </CardFooter>
+      </Card>
+
+      {/* Panel girişi */}
+      <Link
+        href="/account/login"
+        className="mt-6 text-sm text-muted-foreground hover:text-[#4a1c2c] underline-offset-4 hover:underline transition-colors"
+      >
+        Panel Girişi
+      </Link>
     </div>
   );
 }
