@@ -21,7 +21,7 @@ export default function ResultsClient({
 
   useEffect(() => {
     if (!getSession()) {
-      router.replace("/account/login");
+      router.replace("/admin/login");
       return;
     }
     const t = setTimeout(() => {

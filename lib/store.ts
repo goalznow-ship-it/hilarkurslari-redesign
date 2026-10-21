@@ -346,6 +346,11 @@ export function clearEntry() {
   window.sessionStorage.removeItem(KEYS.entry);
 }
 
+/** İmtahan sessiyasını başladır — vaxt damğası burada qeyd olunur */
+export function startExamSession(examId: string, fin: string, ticket: string) {
+  setEntry({ examId, fin, ticket, startedAt: Date.now() });
+}
+
 export function newId(): string {
   return uid();
 }

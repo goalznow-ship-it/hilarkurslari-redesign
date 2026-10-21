@@ -26,7 +26,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     if (!getSession()) {
-      router.replace("/account/login");
+      router.replace("/admin/login");
       return;
     }
     const t = setTimeout(() => setUsers(getUsers()), 0);

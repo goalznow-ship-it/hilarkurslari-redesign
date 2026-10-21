@@ -77,7 +77,7 @@ export default function ClassesPage() {
 
   useEffect(() => {
     if (!getSession()) {
-      router.replace("/account/login");
+      router.replace("/admin/login");
       return;
     }
     const t = setTimeout(() => setClasses(getClasses()), 0);

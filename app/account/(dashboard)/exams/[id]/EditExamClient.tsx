@@ -13,7 +13,7 @@ export default function EditExamClient({ id }: { id: string }) {
 
   useEffect(() => {
     if (!getSession()) {
-      router.replace("/account/login");
+      router.replace("/admin/login");
       return;
     }
     const t = setTimeout(() => {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -14,33 +14,19 @@ import {
   type TooltipContentProps,
 } from "recharts";
 import {
+  Activity,
   ArrowRight,
-  BarChart3,
-  Building2,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
+  Eye,
   FileQuestion,
   Plus,
   Radio,
-  Ticket,
-  TrendingDown,
-  TrendingUp,
   TriangleAlert,
   Users,
-  type LucideIcon,
 } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-import {
-  getExams,
-  getQuestionBank,
-  getResults,
-  getSession,
-  getUsers,
-  initStore,
-} from "@/lib/store";
-import { examStatus, formatDateTime } from "@/lib/helpers";
-import type { Exam, ExamResult, Question, User } from "@/lib/types";
 
 import {
   Badge,
@@ -48,26 +34,37 @@ import {
   Card,
   CardContent,
   CardHeader,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  CardTitle,
+  EmptyState,
+  Skeleton,
+  StatCard,
 } from "@/components/ui";
+import {
+  getExams,
+  getQuestionBank,
+  getResults,
+  getSession,
+  initStore,
+} from "@/lib/store";
+import { examStatus, formatDateTime } from "@/lib/helpers";
+import type { Exam, ExamResult, Question } from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */
 /* Sabitlər                                                                  */
 /* -------------------------------------------------------------------------- */
 
-const TICKET_PRICE = 25; // ₼ — bir biletin qiyməti
-const COMPANY_NAME = "Hilal Kursları";
 const DAY_MS = 86_400_000;
-const CHART_DAYS = 30;
+const TICKET_PRICE = 25; // ₼
+const RANGES = [
+  { days: 7, label: "7 gün" },
+  { days: 30, label: "30 gün" },
+  { days: 90, label: "90 gün" },
+] as const;
 
 const SERIES = {
-  attempts: { key: "attempts", label: "Cəhd", color: "#8b5cf6" },
-  tickets: { key: "tickets", label: "Bilet", color: "#f97316" },
-  questions: { key: "questions", label: "Sual", color: "#10b981" },
+  attempts: { key: "attempts", label: "Cəhd", color: "var(--color-brand-600)" },
+  tickets: { key: "tickets", label: "Bilet", color: "var(--color-gold-500)" },
+  questions: { key: "questions", label: "Sual", color: "var(--color-success)" },
 } as const;
 
 type ChartPoint = {
@@ -78,19 +75,20 @@ type ChartPoint = {
   questions: number;
 };
 
-type AttentionKind = "approval" | "check" | "error";
-
-type AttentionItem = {
-  key: string;
-  kind: AttentionKind;
-  title: string;
-  hint: string;
-  href: string;
-  questions?: Question[];
+type ExamRow = {
+  exam: Exam;
+  status: "planned" | "active" | "ended";
+  participants: number;
+  avgScore: number | null;
+  created: number;
 };
 
+type SortKey = "created" | "participants" | "avg" | "name";
+
+const PAGE_SIZE = 5;
+
 /* -------------------------------------------------------------------------- */
-/* Yardımçı funksiyalar                                                      */
+/* Yardımçılar                                                              */
 /* -------------------------------------------------------------------------- */
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -101,18 +99,19 @@ function dayKey(t: number): string {
 }
 
 function formatNumber(n: number): string {
-  return String(Math.max(0, Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
-function formatRange(startIso: string, endIso: string): string {
-  const s = new Date(startIso);
-  const e = new Date(endIso);
-  const day = (x: Date) => `${pad(x.getDate())}.${pad(x.getMonth() + 1)}.${x.getFullYear()}`;
-  const time = (x: Date) => `${pad(x.getHours())}:${pad(x.getMinutes())}`;
-  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return "—";
-  return s.toDateString() === e.toDateString()
-    ? `${day(s)} · ${time(s)} – ${time(e)}`
-    : `${day(s)} ${time(s)} – ${day(e)} ${time(e)}`;
+function formatManat(n: number): string {
+  return `${formatNumber(n)} ₼`;
+}
+
+function formatDurationShort(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  if (h > 0) return `${h} saat ${m} dəq`;
+  return `${m} dəq`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -125,12 +124,13 @@ export default function AdminDashboardPage() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [results, setResults] = useState<ExamResult[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [company, setCompany] = useState("all");
+  const [rangeDays, setRangeDays] = useState<number>(30);
+  const [sortKey, setSortKey] = useState<SortKey>("created");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (!getSession()) {
-      router.replace("/account/login");
+      router.replace("/admin/login");
       return;
     }
     const t = setTimeout(() => {
@@ -139,66 +139,120 @@ export default function AdminDashboardPage() {
       setExams(getExams());
       setResults(getResults());
       setQuestions(getQuestionBank());
-      setUsers(getUsers());
     }, 0);
     return () => clearTimeout(t);
   }, [router]);
 
-  /* --------------------------- statistika --------------------------- */
+  const changeRange = (days: number) => {
+    setRangeDays(days);
+    setPage(1);
+  };
 
-  const stats = useMemo(() => {
-    if (!now) {
-      return {
-        examsThisMonth: 0,
-        examDelta: 0,
-        liveCount: 0,
-        todayAttempts: 0,
-        verifiedQuestions: 0,
-        pendingCount: 0,
-        tickets30: 0,
-        revenue30: 0,
-        activeCoordinators: 0,
-      };
-    }
+  const changeSort = (key: SortKey) => {
+    setSortKey(key);
+    setPage(1);
+  };
 
-    const d = new Date(now);
-    const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-    const prevMonthStart = new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime();
-    const createdAt = (e: Exam) => new Date(e.createdAt).getTime();
+  const loading = now === 0;
 
-    const examsThisMonth = exams.filter((e) => createdAt(e) >= monthStart).length;
-    const examsPrevMonth = exams.filter(
-      (e) => createdAt(e) >= prevMonthStart && createdAt(e) < monthStart,
-    ).length;
+  /* --------------------------- canlı imtahanlar ----------------------- */
 
-    const today = dayKey(now);
-    const windowStart = now - CHART_DAYS * DAY_MS;
+  const liveExams = useMemo(() => {
+    if (!now) return [];
+    return exams
+      .filter((e) => examStatus(e, now) === "active")
+      .map((exam) => {
+        const examResults = results.filter((r) => r.examId === exam.id);
+        const soldTickets = examResults.filter((r) => Boolean(r.ticketCode)).length;
+        const start = new Date(exam.startsAt).getTime();
+        const end = new Date(exam.endsAt).getTime();
+        const elapsed = Math.min(Math.max(now - start, 0), end - start);
+        const total = Math.max(end - start, 1);
+        return {
+          exam,
+          participants: examResults.length,
+          registered: exam.ticketCodes.length,
+          soldTickets,
+          revenue: soldTickets * TICKET_PRICE,
+          remaining: Math.max(end - now, 0),
+          progress: Math.min(Math.round((elapsed / total) * 100), 100),
+        };
+      });
+  }, [exams, results, now]);
 
-    const tickets30 = results.filter((r) => {
-      const t = new Date(r.finishedAt).getTime();
-      return t >= windowStart && t <= now && Boolean(r.ticketCode);
-    }).length;
+  /* ------------------------------ KPI-lər ---------------------------- */
+
+  const kpis = useMemo(() => {
+    if (!now) return null;
+
+    const periodStart = now - rangeDays * DAY_MS;
+    const prevStart = now - rangeDays * 2 * DAY_MS;
+
+    const inPeriod = (t: number) => t >= periodStart && t <= now;
+    const inPrev = (t: number) => t >= prevStart && t < periodStart;
+
+    const examsIn = exams.filter((e) => inPeriod(new Date(e.createdAt).getTime()));
+    const examsPrev = exams.filter((e) =>
+      inPrev(new Date(e.createdAt).getTime()),
+    );
+
+    const resIn = results.filter((r) =>
+      inPeriod(new Date(r.finishedAt).getTime()),
+    );
+    const resPrev = results.filter((r) =>
+      inPrev(new Date(r.finishedAt).getTime()),
+    );
+
+    const avg = (list: ExamResult[]) =>
+      list.length > 0
+        ? Math.round(list.reduce((a, r) => a + r.score, 0) / list.length)
+        : null;
+
+    const pendingIn = questions.filter(
+      (q) =>
+        q.verification === "pending" &&
+        q.createdAt &&
+        inPeriod(new Date(q.createdAt).getTime()),
+    );
+    const pendingPrev = questions.filter(
+      (q) =>
+        q.verification === "pending" &&
+        q.createdAt &&
+        inPrev(new Date(q.createdAt).getTime()),
+    );
 
     return {
-      examsThisMonth,
-      examDelta: examsThisMonth - examsPrevMonth,
-      liveCount: exams.filter((e) => examStatus(e, now) === "active").length,
-      todayAttempts: results.filter(
-        (r) => dayKey(new Date(r.finishedAt).getTime()) === today,
-      ).length,
-      verifiedQuestions: questions.filter(
-        (q) => (q.verification ?? "verified") === "verified",
-      ).length,
-      pendingCount: questions.filter((q) => q.verification === "pending").length,
-      tickets30,
-      revenue30: tickets30 * TICKET_PRICE,
-      activeCoordinators: users.filter(
-        (u) => u.active && u.role === "coordinator",
-      ).length,
+      exams: {
+        value: formatNumber(examsIn.length),
+        delta: examsIn.length - examsPrev.length,
+        label: `${rangeDays} gündə yaradılan`,
+        href: "/account/exams",
+      },
+      participants: {
+        value: formatNumber(resIn.length),
+        delta: resIn.length - resPrev.length,
+        label: "tamamlanan imtahan",
+        href: "/account/results",
+      },
+      avgScore: {
+        value: avg(resIn) === null ? "—" : `${avg(resIn)}%`,
+        delta:
+          avg(resIn) !== null && avg(resPrev) !== null
+            ? avg(resIn)! - avg(resPrev)!
+            : null,
+        label: "orta bal",
+        href: "/account/results",
+      },
+      pending: {
+        value: formatNumber(pendingIn.length),
+        delta: pendingIn.length - pendingPrev.length,
+        label: "təsdiq gözləyir",
+        href: "/account/questions/verification",
+      },
     };
-  }, [exams, results, questions, users, now]);
+  }, [exams, results, questions, rangeDays, now]);
 
-  /* ---------------------------- qrafik ----------------------------- */
+  /* ------------------------------ qrafik ----------------------------- */
 
   const chartData = useMemo<ChartPoint[]>(() => {
     if (!now) return [];
@@ -209,7 +263,7 @@ export default function AdminDashboardPage() {
     >();
     const order: string[] = [];
 
-    for (let i = CHART_DAYS - 1; i >= 0; i -= 1) {
+    for (let i = rangeDays - 1; i >= 0; i -= 1) {
       const d = new Date(now - i * DAY_MS);
       const key = dayKey(d.getTime());
       buckets.set(key, { attempts: 0, tickets: 0, questions: 0 });
@@ -222,7 +276,6 @@ export default function AdminDashboardPage() {
       bucket.attempts += 1;
       if (r.ticketCode) bucket.tickets += 1;
     }
-
     for (const q of questions) {
       if (!q.createdAt) continue;
       const bucket = buckets.get(dayKey(new Date(q.createdAt).getTime()));
@@ -239,32 +292,31 @@ export default function AdminDashboardPage() {
         ...bucket,
       };
     });
-  }, [results, questions, now]);
+  }, [results, questions, rangeDays, now]);
 
-  const chartTotals = useMemo(
-    () => ({
-      attempts: chartData.reduce((a, p) => a + p.attempts, 0),
-      tickets: chartData.reduce((a, p) => a + p.tickets, 0),
-      questions: chartData.reduce((a, p) => a + p.questions, 0),
-    }),
-    [chartData],
-  );
+  const chartEmpty =
+    chartData.length === 0 ||
+    chartData.every((p) => p.attempts + p.tickets + p.questions === 0);
 
-  /* --------------------------- diqqət ------------------------------ */
+  /* --------------------------- diqqət bloku -------------------------- */
 
-  const attention = useMemo<AttentionItem[]>(() => {
+  const attention = useMemo(() => {
     if (!now) return [];
-    const items: AttentionItem[] = [];
+    const items: {
+      key: string;
+      title: string;
+      description: string;
+      href: string;
+    }[] = [];
 
     const pending = questions.filter((q) => q.verification === "pending");
     if (pending.length > 0) {
       items.push({
-        key: "pending-questions",
-        kind: "approval",
+        key: "pending",
         title: `${pending.length} sual təsdiq gözləyir`,
-        hint: "Sual bankına əlavə olunan suallar yoxlanılmadan nəticələrə daxil edilmir.",
+        description:
+          "Sual bankına əlavə olunan suallar yoxlanılmadan nəticələrə daxil edilmir.",
         href: "/account/questions/verification",
-        questions: pending,
       });
     }
 
@@ -275,10 +327,10 @@ export default function AdminDashboardPage() {
     );
     if (endedWithoutResults.length > 0) {
       items.push({
-        key: "ended-without-results",
-        kind: "check",
+        key: "no-results",
         title: `${endedWithoutResults.length} bitmiş imtahanda nəticə yoxdur`,
-        hint: "İmtahan vaxtı bitib, lakin heç bir iştirakçı qeydə alınmayıb — yoxlama tələb edir.",
+        description:
+          "İmtahan vaxtı bitib, lakin heç bir iştirakçı qeydə alınmayıb — yoxlama tələb edir.",
         href: "/account/exams",
       });
     }
@@ -291,10 +343,10 @@ export default function AdminDashboardPage() {
     );
     if (broken.length > 0) {
       items.push({
-        key: "broken-schedule",
-        kind: "error",
+        key: "broken",
         title: `${broken.length} imtahanda vaxt diapazonu səhvdir`,
-        hint: "Başlama və bitmə vaxtlarını düzəldin, əks halda imtahan açılmayacaq.",
+        description:
+          "Başlama və bitmə vaxtlarını düzəldin, əks halda imtahan açılmayacaq.",
         href: "/account/exams",
       });
     }
@@ -302,415 +354,524 @@ export default function AdminDashboardPage() {
     return items;
   }, [exams, questions, results, now]);
 
-  /* ------------------------- son imtahanlar ------------------------ */
+  /* -------------------------- son imtahanlar ------------------------- */
 
-  const recentExams = useMemo(() => {
+  const examRows = useMemo<ExamRow[]>(() => {
     if (!now) return [];
-    return [...exams]
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      )
-      .slice(0, 6)
+    return exams
       .map((exam) => {
         const examResults = results.filter((r) => r.examId === exam.id);
+        const avg =
+          examResults.length > 0
+            ? Math.round(
+                examResults.reduce((a, r) => a + r.score, 0) /
+                  examResults.length,
+              )
+            : null;
         return {
           exam,
           status: examStatus(exam, now),
-          started: examResults.length,
-          finished: examResults.filter((r) => Boolean(r.finishedAt)).length,
+          participants: examResults.length,
+          avgScore: avg,
+          created: new Date(exam.createdAt).getTime(),
         };
+      })
+      .sort((a, b) => {
+        if (sortKey === "participants") return b.participants - a.participants;
+        if (sortKey === "avg")
+          return (b.avgScore ?? -1) - (a.avgScore ?? -1);
+        if (sortKey === "name") return a.exam.title.localeCompare(b.exam.title);
+        return b.created - a.created;
       });
-  }, [exams, results, now]);
+  }, [exams, results, sortKey, now]);
 
-  /* ----------------------------- render ----------------------------- */
+  const pageCount = Math.max(1, Math.ceil(examRows.length / PAGE_SIZE));
+  const pageRows = examRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  /* ------------------------------ render ----------------------------- */
 
   return (
     <div className="space-y-6">
       {/* ===== Səhifə başlığı ===== */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">İdarəetmə Paneli</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Canlı imtahanlar, son 30 günün dinamikası və təsdiq gözləyən
-            məsələlər bir yerə.
+          <h1 className="text-xl font-semibold text-neutral-900">
+            İdarəetmə Paneli
+          </h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            Canlı imtahanlar, iştirakçılar və seçilmiş dövrün dinamikası.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Şirkət seçimi */}
-          <Select value={company} onValueChange={setCompany}>
-            <SelectTrigger className="h-9 w-[190px] gap-2 text-slate-700">
-              <Building2 className="size-4 text-[#4a1c2c]" />
-              <SelectValue placeholder="Şirkət" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Bütün şirkətlər</SelectItem>
-              <SelectItem value="hilal">{COMPANY_NAME}</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Tarix aralığı */}
+          <div
+            className="flex items-center gap-0.5 rounded-md border border-neutral-200 bg-white p-0.5"
+            role="group"
+            aria-label="Tarix aralığı"
+          >
+            {RANGES.map((r) => (
+              <button
+                key={r.days}
+                onClick={() => changeRange(r.days)}
+                aria-pressed={rangeDays === r.days}
+                className={
+                  rangeDays === r.days
+                    ? "rounded-[6px] bg-brand-700 px-3 py-1.5 text-xs font-medium text-white transition-colors"
+                    : "rounded-[6px] px-3 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100"
+                }
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
 
-          <Button variant="outline" asChild className="gap-1.5">
-            <Link href="/account/users">
-              <Users className="size-4" />
-              İstifadəçi
-            </Link>
-          </Button>
-
-          <Button variant="outline" asChild className="gap-1.5">
-            <Link href="/account/reports">
-              <BarChart3 className="size-4" />
-              Hesabatlıq
-            </Link>
-          </Button>
-
-          <Button asChild className="gap-1.5 bg-[#4a1c2c] text-white hover:bg-[#381420]">
+          <Button asChild className="gap-1.5">
             <Link href="/account/exams/new">
-              <Plus className="size-4" />
-              İmtahan
+              <Plus />
+              Yeni imtahan
             </Link>
           </Button>
         </div>
       </div>
 
-      {/* ===== Statistika kartları ===== */}
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        {/* İmtahan (bu ay) */}
-        <StatCard
-          icon={ClipboardList}
-          label="İmtahan (bu ay)"
-          value={formatNumber(stats.examsThisMonth)}
-          hint="əvvəlki aya nisbətən"
-          tone="violet"
-        >
-          <DeltaBadge delta={stats.examDelta} />
-        </StatCard>
-
-        {/* Onlayn imtahan */}
-        <StatCard
-          icon={Radio}
-          label="Onlayn imtahan indi"
-          value={formatNumber(stats.liveCount)}
-          hint="hal-hazırda açıq imtahan"
-          tone="emerald"
-        >
-          {stats.liveCount > 0 ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold tracking-wide text-emerald-700">
-              <span className="relative flex size-1.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
-              </span>
-              CANLI
+      {/* ===== Canlı imtahanlar ===== */}
+      <section
+        aria-label="Canlı imtahanlar"
+        className="overflow-hidden rounded-lg border border-brand-800 bg-brand-800 text-white shadow-sm"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-8 items-center justify-center rounded-md bg-white/10">
+              <Radio className="size-4 text-gold-300" />
             </span>
-          ) : null}
-        </StatCard>
-
-        {/* Bu gün cəhd */}
-        <StatCard
-          icon={CheckCircle2}
-          label="Bu gün cəhd"
-          value={formatNumber(stats.todayAttempts)}
-          hint="bugün tamamlanan cəhd"
-          tone="sky"
-        />
-
-        {/* Təsdiqli sual */}
-        <StatCard
-          icon={FileQuestion}
-          label="Təsdiqli sual"
-          value={formatNumber(stats.verifiedQuestions)}
-          hint={`gözləyən ${formatNumber(stats.pendingCount)}`}
-          tone="amber"
-        />
-
-        {/* Bilet (30 gün) */}
-        <StatCard
-          icon={Ticket}
-          label="Bilet (30 gün)"
-          value={`₼ ${formatNumber(stats.revenue30)}`}
-          hint={`${formatNumber(stats.tickets30)} bilet satılıb`}
-          tone="orange"
-        />
-
-        {/* Aktiv müəllim */}
-        <StatCard
-          icon={Users}
-          label="Aktiv müəllim"
-          value={formatNumber(stats.activeCoordinators)}
-          hint="aktiv koordinator"
-          tone="slate"
-        />
-      </section>
-
-      {/* ===== Qrafik + xülasə ===== */}
-      <Card className="gap-0 rounded-xl border-slate-200 bg-white py-0 shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-slate-100 px-6 py-4 text-left">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="size-4 text-[#4a1c2c]" />
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">Son 30 gün</h2>
-              <p className="text-xs text-slate-400">
-                gündəlik cəhd, bilet və yeni sual
+              <h2 className="text-sm font-semibold text-white">
+                Canlı imtahanlar
+              </h2>
+              <p className="text-xs text-brand-100/70">
+                {liveExams.length > 0
+                  ? `${liveExams.length} imtahan hal-hazırda açıqdır`
+                  : "Hal-hazırda açıq imtahan yoxdur"}
               </p>
             </div>
-          </div>
-          <span className="hidden text-xs text-slate-400 sm:block">
-            {formatNumber(chartTotals.attempts)} cəhd ·{" "}
-            {formatNumber(chartTotals.tickets)} bilet ·{" "}
-            {formatNumber(chartTotals.questions)} sual
-          </span>
-        </CardHeader>
-
-        <CardContent className="px-6 py-5">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_190px]">
-            <div className="h-[260px] w-full min-w-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 8, right: 4, left: -18, bottom: 0 }}
-                  barCategoryGap="12%"
-                >
-                  <CartesianGrid
-                    vertical={false}
-                    stroke="#e2e8f0"
-                    strokeDasharray="3 3"
-                  />
-                  <XAxis
-                    dataKey="date"
-                    interval={2}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 11, fill: "#94a3b8" }}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    width={34}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 11, fill: "#94a3b8" }}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "#f1f5f9" }}
-                    content={(props) => <ChartTooltip {...props} />}
-                  />
-                  <Bar
-                    dataKey="attempts"
-                    name="Cəhd"
-                    fill={SERIES.attempts.color}
-                    radius={[3, 3, 0, 0]}
-                    maxBarSize={16}
-                  />
-                  <Bar
-                    dataKey="tickets"
-                    name="Bilet"
-                    fill={SERIES.tickets.color}
-                    radius={[3, 3, 0, 0]}
-                    maxBarSize={16}
-                  />
-                  <Bar
-                    dataKey="questions"
-                    name="Sual"
-                    fill={SERIES.questions.color}
-                    radius={[3, 3, 0, 0]}
-                    maxBarSize={16}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Xülasə */}
-            <div className="flex flex-col justify-center gap-3 border-t border-slate-100 pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-              <SummaryRow
-                color={SERIES.attempts.color}
-                label="Cəhd"
-                value={formatNumber(chartTotals.attempts)}
-                hint="tamamlanan imtahan"
-              />
-              <SummaryRow
-                color={SERIES.tickets.color}
-                label="Bilet"
-                value={formatNumber(chartTotals.tickets)}
-                hint="satılan bilet"
-              />
-              <SummaryRow
-                color={SERIES.questions.color}
-                label="Sual"
-                value={formatNumber(chartTotals.questions)}
-                hint="yeni sual"
-              />
-              <p className="border-t border-slate-100 pt-3 text-xs text-slate-500">
-                cəhd {formatNumber(chartTotals.attempts)} · bilet{" "}
-                {formatNumber(chartTotals.tickets)} · sual{" "}
-                {formatNumber(chartTotals.questions)}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ===== Diqqət tələb edir ===== */}
-      <Card className="gap-0 rounded-xl border-slate-200 bg-white py-0 shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-slate-100 px-6 py-4 text-left">
-          <div className="flex items-center gap-2">
-            <TriangleAlert className="size-4 text-amber-500" />
-            <h2 className="text-sm font-semibold text-slate-900">
-              Diqqət tələb edir
-            </h2>
-            {attention.length > 0 && (
-              <Badge variant="warning">{attention.length}</Badge>
-            )}
-          </div>
-        </CardHeader>
-
-        <CardContent className="px-6 py-5">
-          {attention.length === 0 ? (
-            <div className="flex items-center gap-3 text-sm text-slate-500">
-              <CheckCircle2 className="size-5 shrink-0 text-emerald-500" />
-              Hər şey qaydasındadır. Gözləyən təsdiq, yoxlama və ya xəta yoxdur.
-            </div>
-          ) : (
-            <ul className="space-y-4">
-              {attention.map((item) => (
-                <li key={item.key} className="flex gap-3">
-                  <span
-                    className={cn(
-                      "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full",
-                      item.kind === "approval" && "bg-amber-100 text-amber-700",
-                      item.kind === "check" && "bg-sky-100 text-sky-700",
-                      item.kind === "error" && "bg-red-100 text-red-700",
-                    )}
-                  >
-                    {item.kind === "error" ? (
-                      <TriangleAlert className="size-4" />
-                    ) : item.kind === "check" ? (
-                      <ClipboardList className="size-4" />
-                    ) : (
-                      <FileQuestion className="size-4" />
-                    )}
-                  </span>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-slate-900">
-                        {item.title}
-                      </p>
-                      <Link
-                        href={item.href}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-[#4a1c2c] hover:underline underline-offset-4"
-                      >
-                        Yoxla
-                        <ArrowRight className="size-3.5" />
-                      </Link>
-                    </div>
-                    <p className="mt-0.5 text-xs text-slate-500">{item.hint}</p>
-
-                    {item.questions && item.questions.length > 0 && (
-                      <ul className="mt-2.5 space-y-1.5">
-                        {item.questions.slice(0, 4).map((q) => (
-                          <li
-                            key={q.id}
-                            className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/70 px-3 py-2"
-                          >
-                            {q.subject && (
-                              <Badge variant="neutral" className="shrink-0">
-                                {q.subject}
-                              </Badge>
-                            )}
-                            <span className="truncate text-xs text-slate-700">
-                              {q.text}
-                            </span>
-                          </li>
-                        ))}
-                        {item.questions.length > 4 && (
-                          <li className="px-3 text-xs text-slate-400">
-                            + {item.questions.length - 4} sual daha
-                          </li>
-                        )}
-                      </ul>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ===== Son imtahanlar ===== */}
-      <Card className="gap-0 rounded-xl border-slate-200 bg-white py-0 shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-slate-100 px-6 py-4 text-left">
-          <div className="flex items-center gap-2">
-            <ClipboardList className="size-4 text-[#4a1c2c]" />
-            <h2 className="text-sm font-semibold text-slate-900">Son imtahanlar</h2>
           </div>
           <Link
-            href="/account/exams"
-            className="inline-flex items-center gap-1 text-xs font-medium text-[#4a1c2c] hover:underline underline-offset-4"
+            href="/account/online-exams"
+            className="inline-flex items-center gap-1 text-xs font-medium text-gold-300 underline-offset-4 transition-colors hover:text-gold-200 hover:underline"
           >
-            Bütün imtahanlar
+            Onlayn idarəetmə
             <ArrowRight className="size-3.5" />
           </Link>
+        </div>
+
+        {loading ? (
+          <div className="space-y-3 px-5 pb-5">
+            <Skeleton className="h-16 bg-white/10" />
+          </div>
+        ) : liveExams.length === 0 ? (
+          <div className="flex items-center gap-3 border-t border-white/10 px-5 py-6">
+            <CheckCircle2 className="size-5 shrink-0 text-emerald-300/80" />
+            <p className="text-sm text-brand-100/80">
+              Hazırda canlı imtahan yoxdur — yeni imtahan yaradın və vaxt
+              aralığını təyin edin.
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-white/10 border-t border-white/10">
+            {liveExams.map((live) => (
+              <li
+                key={live.exam.id}
+                className="flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-4"
+              >
+                <div className="min-w-[220px] flex-1">
+                  <Link
+                    href={`/account/exams/${live.exam.id}`}
+                    className="text-sm font-medium text-white underline-offset-4 hover:underline"
+                  >
+                    {live.exam.title}
+                  </Link>
+                  <p className="mt-0.5 font-mono text-xs text-brand-100/60">
+                    {live.exam.code ?? "—"}
+                  </p>
+                </div>
+
+                {/* İştirakçı / qeydiyyat */}
+                <div className="min-w-[150px]">
+                  <p className="tnum text-sm text-white">
+                    {live.participants}{" "}
+                    <span className="text-brand-100/60">
+                      / {live.registered} qeydiyyatlı
+                    </span>
+                  </p>
+                  <p className="tnum text-xs text-brand-100/60">
+                    {live.soldTickets} bilet · {formatManat(live.revenue)}
+                  </p>
+                </div>
+
+                {/* Qalan vaxt */}
+                <div className="min-w-[170px]">
+                  <div className="flex items-center justify-between text-xs text-brand-100/70">
+                    <span>Qalan vaxt</span>
+                    <span className="tnum text-white">
+                      {formatDurationShort(live.remaining)}
+                    </span>
+                  </div>
+                  <div
+                    className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/15"
+                    role="progressbar"
+                    aria-valuenow={live.progress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`${live.exam.title} — keçən vaxt`}
+                  >
+                    <div
+                      className="h-full rounded-full bg-gold-400 transition-[width] duration-300"
+                      style={{ width: `${live.progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  asChild
+                  variant="gold"
+                  size="sm"
+                  className="ml-auto gap-1.5"
+                >
+                  <Link href="/account/online-exams">
+                    <Eye />
+                    İzlə
+                  </Link>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* ===== KPI-lər ===== */}
+      <section
+        aria-label="Əsas göstəricilər"
+        className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+      >
+        {loading
+          ? [0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-[118px]" />
+            ))
+          : kpis && (
+              <>
+                <StatCard
+                  label="İmtahanlar"
+                  value={kpis.exams.value}
+                  delta={kpis.exams.delta}
+                  deltaLabel={kpis.exams.label}
+                  href={kpis.exams.href}
+                  icon={ClipboardList}
+                />
+                <StatCard
+                  label="İştirakçılar"
+                  value={kpis.participants.value}
+                  delta={kpis.participants.delta}
+                  deltaLabel={kpis.participants.label}
+                  href={kpis.participants.href}
+                  icon={Users}
+                />
+                <StatCard
+                  label="Orta bal"
+                  value={kpis.avgScore.value}
+                  delta={kpis.avgScore.delta}
+                  deltaLabel={kpis.avgScore.label}
+                  href={kpis.avgScore.href}
+                  icon={Activity}
+                />
+                <StatCard
+                  label="Təsdiq gözləyən sual"
+                  value={kpis.pending.value}
+                  delta={kpis.pending.delta}
+                  deltaLabel={kpis.pending.label}
+                  href={kpis.pending.href}
+                  icon={FileQuestion}
+                />
+              </>
+            )}
+      </section>
+
+      {/* ===== Qrafik + Diqqət ===== */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        {/* Qrafik */}
+        <Card className="gap-0 py-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-neutral-100 py-4">
+            <CardTitle className="text-sm">Aktivlik</CardTitle>
+            <div className="flex items-center gap-3">
+              {Object.values(SERIES).map((s) => (
+                <span
+                  key={s.key}
+                  className="flex items-center gap-1.5 text-xs text-neutral-500"
+                >
+                  <span
+                    className="size-2 rounded-full"
+                    style={{ backgroundColor: s.color }}
+                  />
+                  {s.label}
+                </span>
+              ))}
+            </div>
+          </CardHeader>
+
+          <CardContent className="py-5">
+            {loading ? (
+              <Skeleton className="h-[240px]" />
+            ) : chartEmpty ? (
+              <div className="flex h-[240px] flex-col justify-end gap-3 pb-2">
+                <div className="dashed-empty h-1 w-full" />
+                <p className="text-center text-sm text-neutral-500">
+                  Hələ məlumat yoxdur
+                </p>
+                <p className="text-center text-xs text-neutral-400">
+                  Seçilmiş {rangeDays} gün ərzində cəhd, bilet və ya yeni sual
+                  qeydə alınmayıb.
+                </p>
+              </div>
+            ) : (
+              <div className="h-[240px] w-full min-w-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 8, right: 4, left: -20, bottom: 0 }}
+                    barCategoryGap="14%"
+                  >
+                    <CartesianGrid
+                      vertical={false}
+                      stroke="var(--color-neutral-200)"
+                      strokeDasharray="3 3"
+                    />
+                    <XAxis
+                      dataKey="date"
+                      interval="preserveStartEnd"
+                      minTickGap={24}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 11, fill: "var(--color-neutral-500)" }}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      width={36}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 11, fill: "var(--color-neutral-500)" }}
+                    />
+                    <Tooltip
+                      cursor={{ fill: "var(--color-neutral-100)" }}
+                      content={(props) => <ChartTooltip {...props} />}
+                    />
+                    <Bar
+                      dataKey="attempts"
+                      name="Cəhd"
+                      fill={SERIES.attempts.color}
+                      radius={[3, 3, 0, 0]}
+                      maxBarSize={14}
+                    />
+                    <Bar
+                      dataKey="tickets"
+                      name="Bilet"
+                      fill={SERIES.tickets.color}
+                      radius={[3, 3, 0, 0]}
+                      maxBarSize={14}
+                    />
+                    <Bar
+                      dataKey="questions"
+                      name="Sual"
+                      fill={SERIES.questions.color}
+                      radius={[3, 3, 0, 0]}
+                      maxBarSize={14}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Diqqət tələb edir */}
+        <Card className="gap-0 py-0">
+          <CardHeader className="border-b border-neutral-100 py-4">
+            <CardTitle className="text-sm">Diqqət tələb edir</CardTitle>
+          </CardHeader>
+          <CardContent className="py-4">
+            {loading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12" />
+                <Skeleton className="h-12" />
+              </div>
+            ) : attention.length === 0 ? (
+              <div className="flex items-center gap-2.5 py-2">
+                <CheckCircle2 className="size-4.5 shrink-0 text-success" />
+                <p className="text-sm text-neutral-600">
+                  Hər şey qaydasındadır — gözləyən təsdiq və ya xəta yoxdur.
+                </p>
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {attention.map((item) => (
+                  <li
+                    key={item.key}
+                    className="rounded-md border border-warning/25 bg-warning-soft p-3"
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning-fg" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-warning-fg">
+                          {item.title}
+                        </p>
+                        <p className="mt-0.5 text-xs text-warning-fg/80">
+                          {item.description}
+                        </p>
+                        <Link
+                          href={item.href}
+                          className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-warning-fg underline-offset-4 hover:underline"
+                        >
+                          Yoxla
+                          <ArrowRight className="size-3.5" />
+                        </Link>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ===== Son imtahanlar ===== */}
+      <Card className="gap-0 py-0">
+        <CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-neutral-100 py-4">
+          <CardTitle className="text-sm">Son imtahanlar</CardTitle>
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="sort"
+              className="text-xs text-neutral-500"
+            >
+              Sırala
+            </label>
+            <select
+              id="sort"
+              value={sortKey}
+              onChange={(e) => changeSort(e.target.value as SortKey)}
+              className="h-8 rounded-md border border-neutral-200 bg-white px-2 text-xs text-neutral-700 outline-none focus-visible:border-brand-600"
+            >
+              <option value="created">Tarix</option>
+              <option value="participants">İştirakçı</option>
+              <option value="avg">Orta bal</option>
+              <option value="name">Ad</option>
+            </select>
+            <Link
+              href="/account/exams"
+              className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 underline-offset-4 hover:underline"
+            >
+              Bütün imtahanlar
+              <ArrowRight className="size-3.5" />
+            </Link>
+          </div>
         </CardHeader>
 
         <CardContent className="px-0 py-0">
-          {recentExams.length === 0 ? (
-            <p className="px-6 py-10 text-center text-sm text-slate-500">
-              Hələ imtahan yaradılmayıb.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 text-left text-xs text-slate-500">
-                    <th className="px-6 py-3.5 font-medium">Bilet</th>
-                    <th className="px-4 py-3.5 font-medium">Vəziyyət</th>
-                    <th className="px-4 py-3.5 font-medium">Vaxt</th>
-                    <th className="px-4 py-3.5 font-medium">Başlayan/Bitirən</th>
-                    <th className="px-4 py-3.5 font-medium">İmtahan adı</th>
-                    <th className="px-4 py-3.5 font-medium">Şirkət</th>
-                    <th className="px-4 py-3.5 font-medium">Tarix</th>
-                    <th className="px-6 py-3.5 text-right font-medium">PDF</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {recentExams.map(({ exam, status, started, finished }) => (
-                    <tr key={exam.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 font-mono text-xs font-medium whitespace-nowrap text-slate-700">
-                        {exam.ticketCodes[0] ?? "—"}
-                      </td>
-                      <td className="px-4 py-4">
-                        <StatusBadge status={status} />
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-xs text-slate-600">
-                        {formatRange(exam.startsAt, exam.endsAt)}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-slate-700 tabular-nums">
-                        {started} / {finished}
-                      </td>
-                      <td className="px-4 py-4">
-                        <Link
-                          href={`/account/exams/${exam.id}`}
-                          className="font-medium text-slate-900 hover:text-[#4a1c2c] hover:underline underline-offset-4"
-                        >
-                          {exam.title}
-                        </Link>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {exam.subject} · {exam.questions.length} sual ·{" "}
-                          {exam.durationMin} dəq
-                        </p>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-slate-600">
-                        {COMPANY_NAME}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-xs text-slate-500">
-                        {formatDateTime(exam.createdAt)}
-                      </td>
-                      <td className="px-6 py-4 text-right text-slate-400">—</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {loading ? (
+            <div className="space-y-2 p-5">
+              <Skeleton className="h-11" />
+              <Skeleton className="h-11" />
+              <Skeleton className="h-11" />
             </div>
+          ) : examRows.length === 0 ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="Hələ imtahan yaradılmayıb"
+              description="İlk kitabçanı yaratmaq üçün yeni imtahan əlavə edin."
+              action={
+                <Button asChild>
+                  <Link href="/account/exams/new">
+                    <Plus />
+                    Yeni imtahan
+                  </Link>
+                </Button>
+              }
+            />
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] text-sm">
+                  <thead>
+                    <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">
+                      <th className="px-5 py-3 font-medium">İmtahan</th>
+                      <th className="px-5 py-3 font-medium">Vəziyyət</th>
+                      <th className="px-5 py-3 font-medium">Tarix</th>
+                      <th className="px-5 py-3 font-medium">İştirakçı</th>
+                      <th className="px-5 py-3 font-medium">Orta bal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {pageRows.map((row) => (
+                      <tr key={row.exam.id} className="hover:bg-neutral-50">
+                        <td className="px-5 py-3.5">
+                          <Link
+                            href={`/account/exams/${row.exam.id}`}
+                            className="font-medium text-neutral-900 underline-offset-4 hover:text-brand-700 hover:underline"
+                          >
+                            {row.exam.title}
+                          </Link>
+                          <p className="mt-0.5 font-mono text-xs text-neutral-400">
+                            {row.exam.code ?? "—"}
+                          </p>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <StatusBadge status={row.status} />
+                        </td>
+                        <td className="px-5 py-3.5 text-xs whitespace-nowrap text-neutral-500">
+                          {formatDateTime(row.exam.createdAt)}
+                        </td>
+                        <td className="tnum px-5 py-3.5 text-neutral-700">
+                          {row.participants}
+                        </td>
+                        <td className="tnum px-5 py-3.5 text-neutral-700">
+                          {row.avgScore === null ? "—" : `${row.avgScore}%`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Səhifələmə */}
+              {pageCount > 1 && (
+                <div className="flex items-center justify-between border-t border-neutral-100 px-5 py-3">
+                  <p className="text-xs text-neutral-500">
+                    Səhifə {page} / {pageCount} · {examRows.length} imtahan
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      aria-label="Əvvəlki səhifə"
+                    >
+                      <ChevronLeft />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() =>
+                        setPage((p) => Math.min(pageCount, p + 1))
+                      }
+                      disabled={page === pageCount}
+                      aria-label="Növbəti səhifə"
+                    >
+                      <ChevronRight />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -722,132 +883,16 @@ export default function AdminDashboardPage() {
 /* Alt komponentlər                                                          */
 /* -------------------------------------------------------------------------- */
 
-const TONES = {
-  violet: "bg-violet-50 text-violet-600",
-  emerald: "bg-emerald-50 text-emerald-600",
-  sky: "bg-sky-50 text-sky-600",
-  amber: "bg-amber-50 text-amber-600",
-  orange: "bg-orange-50 text-orange-600",
-  slate: "bg-slate-100 text-slate-600",
-} as const;
-
-type Tone = keyof typeof TONES;
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  hint,
-  tone,
-  children,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  hint: string;
-  tone: Tone;
-  children?: ReactNode;
-}) {
-  return (
-    <Card className="gap-0 rounded-xl border-slate-200 bg-white py-0 shadow-sm transition-shadow hover:shadow-md">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-2">
-          <p className="min-h-[30px] text-xs font-medium leading-tight text-slate-500">
-            {label}
-          </p>
-          <span
-            className={cn(
-              "flex size-7 shrink-0 items-center justify-center rounded-lg",
-              TONES[tone],
-            )}
-          >
-            <Icon className="size-4" />
-          </span>
-        </div>
-
-        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="text-2xl font-bold tracking-tight text-slate-900">
-            {value}
-          </p>
-          {children}
-        </div>
-
-        <p className="mt-1 truncate text-[11px] text-slate-400">{hint}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function DeltaBadge({ delta }: { delta: number }) {
-  if (delta > 0) {
-    return (
-      <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700">
-        <TrendingUp className="size-3" />+{delta}
-      </span>
-    );
-  }
-  if (delta < 0) {
-    return (
-      <span className="inline-flex items-center gap-0.5 rounded-full bg-red-50 px-1.5 py-0.5 text-[11px] font-semibold text-red-700">
-        <TrendingDown className="size-3" />
-        {delta}
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500">
-      0
-    </span>
-  );
-}
-
-function SummaryRow({
-  color,
-  label,
-  value,
-  hint,
-}: {
-  color: string;
-  label: string;
-  value: string;
-  hint: string;
-}) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <span
-        className="size-2.5 shrink-0 rounded-full"
-        style={{ backgroundColor: color }}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-slate-700">{label}</p>
-        <p className="truncate text-[11px] text-slate-400">{hint}</p>
-      </div>
-      <p className="text-lg font-bold text-slate-900">{value}</p>
-    </div>
-  );
-}
-
 function StatusBadge({ status }: { status: "planned" | "active" | "ended" }) {
-  if (status === "active") {
+  if (status === "active")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-        <span className="size-1.5 rounded-full bg-emerald-500" />
+      <Badge variant="success">
+        <span className="size-1.5 rounded-full bg-success" />
         Canlı
-      </span>
+      </Badge>
     );
-  }
-  if (status === "planned") {
-    return (
-      <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-        Gözləmədə
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-      Bitib
-    </span>
-  );
+  if (status === "planned") return <Badge variant="warning">Gözləmədə</Badge>;
+  return <Badge variant="neutral">Bitib</Badge>;
 }
 
 function ChartTooltip({ active, payload }: TooltipContentProps) {
@@ -862,20 +907,20 @@ function ChartTooltip({ active, payload }: TooltipContentProps) {
   ];
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg">
-      <p className="text-xs font-semibold text-slate-900">{point.full}</p>
+    <div className="rounded-md border border-neutral-200 bg-white px-3 py-2 shadow-md">
+      <p className="text-xs font-semibold text-neutral-900">{point.full}</p>
       <ul className="mt-1.5 space-y-1">
         {rows.map((row) => (
           <li
             key={row.label}
-            className="flex items-center gap-2 text-xs text-slate-600"
+            className="flex items-center gap-2 text-xs text-neutral-600"
           >
             <span
               className="size-2 rounded-full"
               style={{ backgroundColor: row.color }}
             />
             {row.label}
-            <span className="ml-auto font-semibold text-slate-900">
+            <span className="tnum ml-auto font-semibold text-neutral-900">
               {row.value}
             </span>
           </li>

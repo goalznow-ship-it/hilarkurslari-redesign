@@ -9,7 +9,7 @@ export default function NewExamPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!getSession()) router.replace("/account/login");
+    if (!getSession()) router.replace("/admin/login");
   }, [router]);
 
   return (
