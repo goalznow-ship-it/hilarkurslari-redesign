@@ -27,3 +27,4 @@ async function EditExamSection({
   const { id } = await params;
   return <EditExamClient id={id} />;
 }
+

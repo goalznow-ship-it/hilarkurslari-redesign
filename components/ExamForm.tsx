@@ -125,7 +125,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
       isEdit,
     );
 
-    router.push("/account");
+    router.push("/account/exams");
   };
 
   return (
