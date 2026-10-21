@@ -3,6 +3,9 @@ export type Question = {
   text: string;
   options: string[];
   correct: number; // index of correct option
+  subject?: string;
+  grade?: string; // sinif, məs. "X sinif"
+  difficulty?: "Asan" | "Orta" | "Çətin";
 };
 
 export type Exam = {

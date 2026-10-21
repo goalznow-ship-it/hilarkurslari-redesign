@@ -296,6 +296,10 @@ export function addQuestionToBank(q: Question) {
   saveQuestionBank(bank);
 }
 
+export function deleteQuestionFromBank(id: string) {
+  saveQuestionBank(getQuestionBank().filter((q) => q.id !== id));
+}
+
 function seedBank(): Question[] {
   return [
     {
@@ -303,36 +307,90 @@ function seedBank(): Question[] {
       text: "2x + 6 = 18 tənliyində x-in qiyməti neçədir?",
       options: ["4", "6", "8", "12"],
       correct: 1,
+      subject: "Riyaziyyat",
+      grade: "IX sinif",
+      difficulty: "Asan",
     },
     {
       id: uid(),
       text: "45 × 18 hasilinin qiyməti necədir?",
       options: ["720", "780", "810", "850"],
       correct: 2,
+      subject: "Riyaziyyat",
+      grade: "VII sinif",
+      difficulty: "Asan",
+    },
+    {
+      id: uid(),
+      text: "Kvadrat tənliyin diskriminantı necə tapılır?",
+      options: ["b² − 4ac", "b² + 4ac", "4ac − b²", "b² · 4ac"],
+      correct: 0,
+      subject: "Riyaziyyat",
+      grade: "IX sinif",
+      difficulty: "Orta",
     },
     {
       id: uid(),
       text: "Kubun neçə tilası (kənarı) var?",
       options: ["8", "10", "12", "16"],
       correct: 2,
+      subject: "Riyaziyyat",
+      grade: "VII sinif",
+      difficulty: "Asan",
     },
     {
       id: uid(),
       text: "Sürətin beynəlxalq sistemdə (SI-də) vahidi hansıdır?",
       options: ["km/saat", "m/s", "m/s²", "km/s"],
       correct: 1,
+      subject: "Fizika",
+      grade: "VIII sinif",
+      difficulty: "Asan",
     },
     {
       id: uid(),
       text: "1 kiloqram neçə qrama bərabərdir?",
       options: ["10", "100", "1000", "10 000"],
       correct: 2,
+      subject: "Fizika",
+      grade: "VII sinif",
+      difficulty: "Asan",
     },
     {
       id: uid(),
       text: "Elektrik cərəyanının vahidi hansıdır?",
       options: ["Volt", "Amper", "Om", "Vat"],
       correct: 1,
+      subject: "Fizika",
+      grade: "IX sinif",
+      difficulty: "Orta",
+    },
+    {
+      id: uid(),
+      text: "Azərbaycanın dövlət dili hansıdır?",
+      options: ["Rus dili", "İngilis dili", "Azərbaycan dili", "Türk dili"],
+      correct: 2,
+      subject: "Azərbaycan dili",
+      grade: "V sinif",
+      difficulty: "Asan",
+    },
+    {
+      id: uid(),
+      text: "H2O kimyəvi formulu hansı maddəyə aiddir?",
+      options: ["Hidrogen", "Oksigen", "Su", "Hidrogen peroksid"],
+      correct: 2,
+      subject: "Kimya",
+      grade: "VIII sinif",
+      difficulty: "Asan",
+    },
+    {
+      id: uid(),
+      text: "Fotosintez zamanı hansı qaz ayrılır?",
+      options: ["Oksigen", "Karbon qazı", "Azot", "Hidrogen"],
+      correct: 0,
+      subject: "Biologiya",
+      grade: "VII sinif",
+      difficulty: "Orta",
     },
   ];
 }
