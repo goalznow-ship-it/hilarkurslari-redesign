@@ -5,6 +5,7 @@ import type {
   Exam,
   ExamResult,
   Question,
+  SchoolClass,
   User,
 } from "./types";
 
@@ -16,6 +17,7 @@ const KEYS = {
   bank: "kitabca.questionBank",
   bankInit: "kitabca.questionBank.initAt",
   users: "kitabca.users",
+  classes: "kitabca.classes",
 };
 
 export const ADMIN_USER = "admin";
@@ -186,6 +188,9 @@ function seedIfEmpty() {
   }
   if (!window.localStorage.getItem(KEYS.users)) {
     writeJSON(KEYS.users, seedUsers());
+  }
+  if (!window.localStorage.getItem(KEYS.classes)) {
+    writeJSON(KEYS.classes, seedClasses());
   }
 }
 
@@ -399,6 +404,104 @@ export function deleteQuestionFromBank(id: string) {
 export function getUsers(): User[] {
   seedIfEmpty();
   return readJSON<User[]>(KEYS.users, []);
+}
+
+// ---------------------------------------------------------------------------
+// Siniflər & Qruplar
+// ---------------------------------------------------------------------------
+
+export function getClasses(): SchoolClass[] {
+  seedIfEmpty();
+  const list = readJSON<SchoolClass[]>(KEYS.classes, []);
+
+  // Köhnə məlumatlarda tədris ili / yaradılma tarixi yoxdur — bir dəfəlik miqrasiya
+  let changed = false;
+  const normalized = list.map((c) => {
+    if (c.academicYear && c.createdAt) return c;
+    changed = true;
+    return {
+      ...c,
+      academicYear: c.academicYear ?? currentAcademicYear(),
+      createdAt: c.createdAt ?? new Date().toISOString(),
+      studentCount: c.studentCount ?? 0,
+      section: c.section ?? "",
+    };
+  });
+  if (changed) writeJSON(KEYS.classes, normalized);
+  return normalized;
+}
+
+export function saveClass(schoolClass: SchoolClass) {
+  const classes = getClasses();
+  const idx = classes.findIndex((c) => c.id === schoolClass.id);
+  if (idx >= 0) classes[idx] = schoolClass;
+  else classes.push(schoolClass);
+  writeJSON(KEYS.classes, classes);
+}
+
+export function deleteClass(id: string) {
+  writeJSON(
+    KEYS.classes,
+    getClasses().filter((c) => c.id !== id),
+  );
+}
+
+function seedClasses(): SchoolClass[] {
+  const year = currentAcademicYear();
+  const now = new Date().toISOString();
+
+  return [
+    {
+      id: "class-9a",
+      name: "9A",
+      grade: "IX sinif",
+      section: "A",
+      teacher: "A. Məmmədova",
+      studentCount: 28,
+      academicYear: year,
+      createdAt: now,
+    },
+    {
+      id: "class-10b",
+      name: "10B",
+      grade: "X sinif",
+      section: "B",
+      teacher: "R. İsmayılov",
+      studentCount: 26,
+      academicYear: year,
+      createdAt: now,
+    },
+    {
+      id: "class-11-blok-1",
+      name: "XI Blok 1",
+      grade: "XI sinif",
+      section: "Blok 1",
+      teacher: "S. Həsənova",
+      studentCount: 22,
+      academicYear: year,
+      createdAt: now,
+    },
+    {
+      id: "class-buraxilis-2026",
+      name: "Buraxılış qrupu 2026",
+      grade: "XI sinif",
+      section: "Buraxılış",
+      teacher: "N. Əliyeva",
+      studentCount: 18,
+      academicYear: year,
+      createdAt: now,
+    },
+    {
+      id: "class-5-hazirliq",
+      name: "5-ci sinif hazırlıq",
+      grade: "V sinif",
+      section: "Hazırlıq",
+      teacher: "F. Quliyeva",
+      studentCount: 24,
+      academicYear: year,
+      createdAt: now,
+    },
+  ];
 }
 
 function seedUsers(): User[] {

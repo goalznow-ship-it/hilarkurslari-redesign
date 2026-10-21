@@ -17,7 +17,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  Users,
+  Network,
   Wifi,
   X,
 } from "lucide-react";
@@ -42,7 +42,7 @@ const NAV_GROUPS = [
     items: [
       { href: "/account/companies", label: "Şirkətlər", icon: Building2 },
       { href: "/account/years", label: "Tədris İlləri", icon: CalendarRange },
-      { href: "/account/classes", label: "Siniflər", icon: Users },
+      { href: "/account/classes", label: "Siniflər & Qruplar", icon: Network },
     ],
   },
   {

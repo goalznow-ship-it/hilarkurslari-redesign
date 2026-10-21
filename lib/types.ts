@@ -71,3 +71,14 @@ export type User = {
   role: UserRole;
   active: boolean;
 };
+
+export type SchoolClass = {
+  id: string;
+  name: string; // "9A", "Blok 1" kimi
+  grade: string; // "IX sinif"
+  section?: string; // "A", "Blok 1" (şöbə/blok)
+  teacher: string; // sinif rəhbəri/müəllim
+  studentCount: number;
+  academicYear: string; // "2026-2027"
+  createdAt: string;
+};
