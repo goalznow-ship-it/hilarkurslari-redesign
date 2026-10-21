@@ -1,10 +1,17 @@
-import type { AdminSession, EntryData, Exam, ExamResult } from "./types";
+import type {
+  AdminSession,
+  EntryData,
+  Exam,
+  ExamResult,
+  Question,
+} from "./types";
 
 const KEYS = {
   exams: "kitabca.exams",
   results: "kitabca.results",
   session: "kitabca.admin.session",
   entry: "kitabca.entry",
+  bank: "kitabca.questionBank",
 };
 
 export const ADMIN_USER = "admin";
@@ -32,7 +39,7 @@ function uid(): string {
 }
 
 // ---------------------------------------------------------------------------
-// Seed
+// Seed (imtahanlar)
 // ---------------------------------------------------------------------------
 
 function seed(): Exam[] {
@@ -155,15 +162,17 @@ function seedIfEmpty() {
   if (!window.localStorage.getItem(KEYS.results)) {
     writeJSON(KEYS.results, []);
   }
+  if (!window.localStorage.getItem(KEYS.bank)) {
+    writeJSON(KEYS.bank, seedBank());
+  }
 }
 
-/** İlk çaırqan lazıdır - localStorage buzlamaq üçün səhifə yüklənəndə çaırılır. */
 export function initStore() {
   seedIfEmpty();
 }
 
 // ---------------------------------------------------------------------------
-// CRUD bağışları
+// Imtahan CRUD
 // ---------------------------------------------------------------------------
 
 export function getExams(): Exam[] {
@@ -192,7 +201,6 @@ export function deleteExam(id: string) {
     KEYS.exams,
     getExams().filter((e) => e.id !== id),
   );
-  // Əlaqədar nəticələri də sil
   writeJSON(
     KEYS.results,
     getResults().filter((r) => r.examId !== id),
@@ -214,7 +222,10 @@ export function getResult(id: string): ExamResult | undefined {
   return getResults().find((r) => r.id === id);
 }
 
-export function findResultByParticipant(examId: string, fin: string): ExamResult | undefined {
+export function findResultByParticipant(
+  examId: string,
+  fin: string,
+): ExamResult | undefined {
   return getResults().find(
     (r) => r.examId === examId && r.fin.toUpperCase() === fin.toUpperCase(),
   );
@@ -237,7 +248,7 @@ export function clearSession() {
 }
 
 // ---------------------------------------------------------------------------
-// Şagird girişi (imtahana başlamadan əvvəl )
+// Şagird girişi
 // ---------------------------------------------------------------------------
 
 export function setEntry(entry: EntryData) {
@@ -260,4 +271,68 @@ export function clearEntry() {
 
 export function newId(): string {
   return uid();
+}
+
+// ---------------------------------------------------------------------------
+// Sual bankı
+// ---------------------------------------------------------------------------
+
+export function getQuestionBank(): Question[] {
+  seedIfEmpty();
+  if (!window.localStorage.getItem(KEYS.bank)) {
+    writeJSON(KEYS.bank, seedBank());
+  }
+  return readJSON<Question[]>(KEYS.bank, []);
+}
+
+export function saveQuestionBank(list: Question[]) {
+  writeJSON(KEYS.bank, list);
+}
+
+export function addQuestionToBank(q: Question) {
+  const bank = getQuestionBank();
+  if (bank.some((b) => b.text.trim() === q.text.trim())) return;
+  bank.push({ ...q, id: newId() });
+  saveQuestionBank(bank);
+}
+
+function seedBank(): Question[] {
+  return [
+    {
+      id: uid(),
+      text: "2x + 6 = 18 tənliyində x-in qiyməti neçədir?",
+      options: ["4", "6", "8", "12"],
+      correct: 1,
+    },
+    {
+      id: uid(),
+      text: "45 × 18 hasilinin qiyməti necədir?",
+      options: ["720", "780", "810", "850"],
+      correct: 2,
+    },
+    {
+      id: uid(),
+      text: "Kubun neçə tilası (kənarı) var?",
+      options: ["8", "10", "12", "16"],
+      correct: 2,
+    },
+    {
+      id: uid(),
+      text: "Sürətin beynəlxalq sistemdə (SI-də) vahidi hansıdır?",
+      options: ["km/saat", "m/s", "m/s²", "km/s"],
+      correct: 1,
+    },
+    {
+      id: uid(),
+      text: "1 kiloqram neçə qrama bərabərdir?",
+      options: ["10", "100", "1000", "10 000"],
+      correct: 2,
+    },
+    {
+      id: uid(),
+      text: "Elektrik cərəyanının vahidi hansıdır?",
+      options: ["Volt", "Amper", "Om", "Vat"],
+      correct: 1,
+    },
+  ];
 }

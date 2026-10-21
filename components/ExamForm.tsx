@@ -1,21 +1,55 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { Exam, Question } from "@/lib/types";
-import { newId, saveExam } from "@/lib/store";
+import { useRouter } from "next/navigation";
+import {
+  Bookmark,
+  BookOpen,
+  Plus,
+  Trash2,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
+
+import {
+  addQuestionToBank,
+  getQuestionBank,
+  newId,
+  saveExam,
+} from "@/lib/store";
 import { formatDateTimeLocal } from "@/lib/helpers";
+import type { Exam, Question } from "@/lib/types";
 
 export type ExamFormMode = "create" | "edit";
 
 type EditorState = {
   title: string;
   subject: string;
-  startsAt: string; // datetime-local format
+  startsAt: string;
   endsAt: string;
   durationMin: string;
   ticketCodes: string;
 };
+
+let questionSeq = 0;
+function blankQuestion(): Question {
+  return { id: `q-${++questionSeq}`, text: "", options: ["", "", "", ""], correct: 0 };
+}
 
 export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Exam }) {
   const router = useRouter();
@@ -36,47 +70,95 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
   );
 
   const [errors, setErrors] = useState<string[]>([]);
+  const [bankOpen, setBankOpen] = useState(false);
+  const [selectedBankIds, setSelectedBankIds] = useState<string[]>([]);
+  const [bankQuestions, setBankQuestions] = useState<Question[]>([]);
 
-  // Yaratma rejimində tarix sahələrini tayıntıdan sonra doldur (prerender-də Date.now() yasaqlıdır)
+  // Yaratma rejimində tarix sahələrini default dəyərlərlə doldur
   useEffect(() => {
     if (exam) return;
     const t = setTimeout(() => {
-      const startsAt = new Date(Date.now() - 60 * 60 * 1000).toISOString(); // 1 saat əvvəl
-      const endsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 1 həftə sonra
+      const startsAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const endsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
       setState((s) =>
         s.startsAt || s.endsAt
           ? s
-          : { ...s, startsAt: formatDateTimeLocal(startsAt), endsAt: formatDateTimeLocal(endsAt) },
+          : {
+              ...s,
+              startsAt: formatDateTimeLocal(startsAt),
+              endsAt: formatDateTimeLocal(endsAt),
+            },
       );
     }, 0);
     return () => clearTimeout(t);
   }, [exam]);
 
+  // Sual bankını yüklə (dialog açılanda yenilənir)
+  useEffect(() => {
+    if (!bankOpen) return;
+    const t = setTimeout(() => {
+      setBankQuestions(getQuestionBank());
+    }, 0);
+    return () => clearTimeout(t);
+  }, [bankOpen]);
+
   const setField = (k: keyof EditorState, v: string) =>
     setState((s) => ({ ...s, [k]: v }));
 
-  const updateQuestion = (
-    qid: string,
-    patch: Partial<Pick<Question, "text" | "correct">> | { option: number; value: string },
-  ) => {
+  const updateQuestionText = (qid: string, text: string) =>
+    setQuestions((qs) =>
+      qs.map((q) => (q.id === qid ? { ...q, text } : q)),
+    );
+
+  const updateOption = (qid: string, oi: number, value: string) =>
     setQuestions((qs) =>
       qs.map((q) => {
         if (q.id !== qid) return q;
-        if ("option" in patch) {
-          const opts = [...q.options];
-          opts[patch.option] = patch.value;
-          return { ...q, options: opts };
-        }
-        return { ...q, ...patch };
+        const opts = [...q.options];
+        opts[oi] = value;
+        return { ...q, options: opts };
       }),
     );
+
+  const updateCorrect = (qid: string, correct: number) =>
+    setQuestions((qs) =>
+      qs.map((q) => (q.id === qid ? { ...q, correct } : q)),
+    );
+
+  const removeQuestion = (qid: string) =>
+    setQuestions((qs) =>
+      qs.length > 1 ? qs.filter((q) => q.id !== qid) : qs,
+    );
+
+  const addBankQuestion = (q: Question) => {
+    addQuestionToBank(q);
+    setBankQuestions(getQuestionBank());
   };
 
-  const removeQuestion = (qid: string) => {
-    setQuestions((qs) => (qs.length > 1 ? qs.filter((q) => q.id !== qid) : qs));
+  const handleAddSelected = () => {
+    const selected = bankQuestions.filter((q) =>
+      selectedBankIds.includes(q.id),
+    );
+    if (selected.length === 0) return;
+    setQuestions((qs) => [
+      ...qs,
+      ...selected.map((q) => ({
+        id: newId(),
+        text: q.text,
+        options: [...q.options],
+        correct: q.correct,
+      })),
+    ]);
+    setSelectedBankIds([]);
+    setBankOpen(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const toggleBankSelection = (id: string) =>
+    setSelectedBankIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const errs: string[] = [];
 
@@ -93,7 +175,8 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
     questions.forEach((q, i) => {
       if (!q.text.trim()) errs.push(`${i + 1}. sualın mətni boşdur.`);
       q.options.forEach((o, oi) => {
-        if (!o.trim()) errs.push(`${i + 1}. sualın ${String.fromCharCode(65 + oi)} variantı boşdur.`);
+        if (!o.trim())
+          errs.push(`${i + 1}. sualın ${String.fromCharCode(65 + oi)} variantı boşdur.`);
       });
       if (!(q.correct >= 0 && q.correct < q.options.length))
         errs.push(`${i + 1}. sualda düzgün variant seçin.`);
@@ -129,9 +212,9 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
   };
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
+    <form onSubmit={handleSubmit} noValidate className="space-y-6">
       {errors.length > 0 && (
-        <div className="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <ul className="list-disc list-inside space-y-1">
             {errors.map((err, i) => (
               <li key={i}>{err}</li>
@@ -140,170 +223,270 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
         </div>
       )}
 
-      {/* Ümumi məlumatlar */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-        <h3 className="font-semibold text-gray-900">Əsas məlumatlar</h3>
-        <div className="grid md:grid-cols-2 gap-4">
-          <Field label="İmtahanın adı">
-            <input
+      {/* ===== Əsas məlumatlar ===== */}
+      <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-base text-[#4a1c2c]">
+            Əsas məlumatlar
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-2">
+            <Label htmlFor="title">İmtahanın adı</Label>
+            <Input
+              id="title"
               value={state.title}
               onChange={(e) => setField("title", e.target.value)}
               placeholder="Məs: Riyaziyyat — Sınaq imtahanı №2"
-              className={inputClass}
             />
-          </Field>
-          <Field label="Fənn">
-            <input
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="subject">Fənn</Label>
+            <Input
+              id="subject"
               value={state.subject}
               onChange={(e) => setField("subject", e.target.value)}
               placeholder="Məs: Riyaziyyat"
-              className={inputClass}
             />
-          </Field>
-          <Field label="Başlanğıc tarixi">
-            <input
-              type="datetime-local"
-              value={state.startsAt}
-              onChange={(e) => setField("startsAt", e.target.value)}
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Bitmə tarixi">
-            <input
-              type="datetime-local"
-              value={state.endsAt}
-              onChange={(e) => setField("endsAt", e.target.value)}
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Müddət (dəqiqə)">
-            <input
-              type="number"
-              min={1}
-              max={1000}
-              value={state.durationMin}
-              onChange={(e) => setField("durationMin", e.target.value)}
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Bilet kodları (vergüllə ayırın — boş olsa istənilən kod qəbul edilir)">
-            <input
-              value={state.ticketCodes}
-              onChange={(e) => setField("ticketCodes", e.target.value)}
-              placeholder="Məs: 1234-5678, 8765-4321"
-              className={inputClass}
-            />
-          </Field>
-        </div>
-        <p className="text-xs text-gray-500">
-          İmtahan yalnız başlanğıc və bitmə tarixi aralığında şagirdlər üçün açıq
-          olur. Bilet kodları sahəsi boş olarsa, istənilən keçərli formatlı kod
-          qəbul edilir.
-        </p>
-      </div>
+          </div>
 
-      {/* Suallar */}
-      <div className="mt-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Suallar ({questions.length})</h3>
-          <button
-            type="button"
-            onClick={() => setQuestions((qs) => [...qs, blankQuestion()])}
-            className="px-3 py-1.5 rounded-md border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            + Sual əlavə et
-          </button>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="startsAt">Başlanğıc tarixi</Label>
+              <Input
+                id="startsAt"
+                type="datetime-local"
+                value={state.startsAt}
+                onChange={(e) => setField("startsAt", e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="endsAt">Bitmə tarixi</Label>
+              <Input
+                id="endsAt"
+                type="datetime-local"
+                value={state.endsAt}
+                onChange={(e) => setField("endsAt", e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="duration">Müddət (dəqiqə)</Label>
+              <Input
+                id="duration"
+                type="number"
+                min={1}
+                max={1000}
+                value={state.durationMin}
+                onChange={(e) => setField("durationMin", e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="tickets">Bilet kodları</Label>
+              <Input
+                id="tickets"
+                value={state.ticketCodes}
+                onChange={(e) => setField("ticketCodes", e.target.value)}
+                placeholder="1234-5678, 8765-4321 (boş = istənilən)"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-slate-500">
+            İmtahan yalnız başlanğıc və bitmə tarixi aralığında şagirdlər üçün
+            açıq olur. Bilet kodları sahəsi boş olarsa, istənilən keçərli
+            formatlı kod qəbul edilir.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* ===== Suallar ===== */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-slate-900">
+            Suallar ({questions.length})
+          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setQuestions((qs) => [...qs, blankQuestion()])}
+              className="gap-1.5"
+            >
+              <Plus className="size-4" />
+              Sual əlavə et
+            </Button>
+
+            <Dialog open={bankOpen} onOpenChange={setBankOpen}>
+              <DialogTrigger asChild>
+                <Button type="button" variant="outline" className="gap-1.5">
+                  <BookOpen className="size-4" />
+                  Sual Bankından Seç
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Sual Bankı</DialogTitle>
+                  <DialogDescription>
+                    Əvvəlcədən yaradılmış sualları seçin və imtahana əlavə edin.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {bankQuestions.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-slate-500">
+                    Sual bankı boşdur. Sual kartındakı bookmark ikonu ilə sualları
+                    banka əlavə edə bilərsiniz.
+                  </p>
+                ) : (
+                  <div className="max-h-[50vh] space-y-3 overflow-y-auto pr-1">
+                    {bankQuestions.map((q) => {
+                      const checked = selectedBankIds.includes(q.id);
+                      return (
+                        <label
+                          key={q.id}
+                          className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors ${
+                            checked
+                              ? "border-[#4a1c2c]/40 bg-[#4a1c2c]/5"
+                              : "border-slate-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => toggleBankSelection(q.id)}
+                            className="mt-0.5"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-slate-900">
+                              {q.text || "— mətnsiz sual —"}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {q.options.map((o, i) => (
+                                <span key={i} className="mr-2">
+                                  {String.fromCharCode(65 + i)}) {o}
+                                </span>
+                              ))}
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setBankOpen(false)}
+                  >
+                    Bağla
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleAddSelected}
+                    disabled={selectedBankIds.length === 0}
+                    className="bg-[#4a1c2c] hover:bg-[#381420] text-white"
+                  >
+                    Seçilmişləri əlavə et ({selectedBankIds.length})
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {questions.map((q, qi) => (
-          <div key={q.id} className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-medium text-gray-500">Sual {qi + 1}</span>
-              <button
-                type="button"
-                onClick={() => removeQuestion(q.id)}
-                disabled={questions.length <= 1}
-                className="text-red-600 hover:underline text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                Sil
-              </button>
-            </div>
-
-            <Field label={`${qi + 1}. Sualın mətni`}>
-              <textarea
-                value={q.text}
-                onChange={(e) => updateQuestion(q.id, { text: e.target.value })}
-                rows={2}
-                className={inputClass}
-              />
-            </Field>
-
-            <div className="mt-4 space-y-2">
-              <p className="text-xs font-medium text-gray-500">
-                Cavab variantları (düzgünunu seçin):
-              </p>
-              {q.options.map((opt, oi) => (
-                <label
-                  key={oi}
-                  className="flex items-center gap-3 cursor-pointer"
+          <Card
+            key={q.id}
+            className="relative rounded-xl border-slate-200 bg-white shadow-sm"
+          >
+            <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
+              <CardTitle className="text-sm font-semibold text-[#4a1c2c]">
+                Sual {qi + 1}
+              </CardTitle>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => addBankQuestion(q)}
+                  title="Sualı banka əlavə et"
+                  className="text-slate-400 hover:text-[#4a1c2c]"
                 >
-                  <input
-                    type="radio"
-                    name={`correct-${q.id}`}
-                    checked={q.correct === oi}
-                    onChange={() => updateQuestion(q.id, { correct: oi })}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-xs font-semibold text-gray-500 w-5">
-                    {String.fromCharCode(65 + oi)})
-                  </span>
-                  <input
-                    value={opt}
-                    onChange={(e) => updateQuestion(q.id, { option: oi, value: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
+                  <Bookmark className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeQuestion(q.id)}
+                  disabled={questions.length <= 1}
+                  title="Sualı sil"
+                  className="text-slate-400 hover:text-red-600"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor={`q-text-${q.id}`}>Sualın mətni</Label>
+                <Textarea
+                  id={`q-text-${q.id}`}
+                  value={q.text}
+                  onChange={(e) => updateQuestionText(q.id, e.target.value)}
+                  rows={3}
+                  placeholder="Sualı buraya yazın…"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-slate-500">
+                  Cavab variantları (düzgününü seçin):
+                </p>
+                <RadioGroup
+                  value={String(q.correct)}
+                  onValueChange={(v) => updateCorrect(q.id, parseInt(v, 10))}
+                  className="gap-2"
+                >
+                  {q.options.map((opt, oi) => (
+                    <div
+                      key={oi}
+                      className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50/50 px-3 py-2"
+                    >
+                      <RadioGroupItem
+                        value={String(oi)}
+                        id={`q-${q.id}-opt-${oi}`}
+                      />
+                      <span className="w-5 text-xs font-semibold text-slate-500">
+                        {String.fromCharCode(65 + oi)}
+                      </span>
+                      <Input
+                        value={opt}
+                        onChange={(e) => updateOption(q.id, oi, e.target.value)}
+                        placeholder={`Variant ${String.fromCharCode(65 + oi)}`}
+                        className="flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                      />
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      <div className="mt-6 flex items-center gap-3">
-        <button
+      {/* ===== Sticky yadda saxlama düyməsi ===== */}
+      <div className="sticky bottom-4 z-20 flex justify-end pt-2">
+        <Button
           type="submit"
-          className="px-5 py-2.5 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="gap-2 bg-[#4a1c2c] hover:bg-[#381420] text-white shadow-lg"
         >
-          {mode === "create" ? "Yarat" : "Yadda saxla"}
-        </button>
-        <button
-          type="button"
-          onClick={() => router.push("/account")}
-          className="px-5 py-2.5 rounded-md border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-        >
-          Ləğv et
-        </button>
+          Yadda Saxla və Dərc Et
+        </Button>
       </div>
     </form>
   );
 }
-
-const inputClass =
-  "w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="block text-sm font-medium text-gray-700 mb-1.5">{label}</p>
-      {children}
-    </div>
-  );
-}
-
-function blankQuestion(): Question {
-  // Deterministik id: SSR və hydration eyni sıranı alır (prerender-də
-  // crypto.randomUUID() istifadə etmək olmur)
-  return { id: `q-${++questionSeq}`, text: "", options: ["", "", "", ""], correct: 0 };
-}
-
-let questionSeq = 0;
