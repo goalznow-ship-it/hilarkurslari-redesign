@@ -132,9 +132,21 @@ export default function QuestionsPage() {
     const bank = getQuestionBank();
     if (editing) {
       const idx = bank.findIndex((b) => b.id === editing.id);
-      if (idx >= 0) bank[idx] = { ...form };
+      if (idx >= 0) {
+        bank[idx] = {
+          ...form,
+          createdAt: editing.createdAt ?? new Date().toISOString(),
+          verification: editing.verification ?? "verified",
+        };
+      }
     } else {
-      bank.unshift({ ...form, id: form.id || `q-${Date.now()}` });
+      // Banka yeni əlavə olunan sual təsdiq gözləyir
+      bank.unshift({
+        ...form,
+        id: form.id || `q-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        verification: "pending",
+      });
     }
     saveQuestionBank(bank);
     reload();
@@ -275,6 +287,9 @@ export default function QuestionsPage() {
                     <Badge variant={difficultyVariant(q.difficulty)}>
                       {q.difficulty}
                     </Badge>
+                  )}
+                  {(q.verification ?? "verified") === "pending" && (
+                    <Badge variant="warning">Təsdiq gözləyir</Badge>
                   )}
                 </div>
 

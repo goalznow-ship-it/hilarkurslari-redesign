@@ -1,4 +1,4 @@
-import type { Exam, ExamStatus } from "./types";
+import type { Exam, ExamPhase, ExamStatus } from "./types";
 
 export function examStatus(exam: Exam, now: number = Date.now()): ExamStatus {
   if (now < new Date(exam.startsAt).getTime()) return "planned";
@@ -17,6 +17,36 @@ export const STATUS_STYLES: Record<ExamStatus, string> = {
   active: "bg-green-100 text-green-800",
   ended: "bg-gray-100 text-gray-600",
 };
+
+/* Kitabça hazırlıq vəziyyətləri */
+
+export const PHASE_LABELS: Record<ExamPhase, string> = {
+  preparing: "Kitabça Hazırlanır",
+  first_ready: "İlk Versiya Hazırdır",
+  review: "Yoxlanılır",
+  done: "Tamamlandı",
+};
+
+export const PHASE_STYLES: Record<ExamPhase, string> = {
+  preparing: "bg-blue-100 text-blue-700",
+  first_ready: "bg-orange-100 text-orange-700",
+  review: "bg-violet-100 text-violet-700",
+  done: "bg-emerald-100 text-emerald-700",
+};
+
+export const PHASE_ORDER: ExamPhase[] = [
+  "preparing",
+  "first_ready",
+  "review",
+  "done",
+];
+
+/** Cari tədris ili (sentyabr-dan başlayır): "2026-2027" */
+export function currentAcademicYear(now: number = Date.now()): string {
+  const d = new Date(now);
+  const startYear = d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1;
+  return `${startYear}-${startYear + 1}`;
+}
 
 const FIN_RE = /^[A-Z0-9]{7}$/;
 const TICKET_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;

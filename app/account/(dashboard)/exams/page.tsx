@@ -2,27 +2,40 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ArrowRight,
+  CalendarRange,
+  ClipboardList,
+  Copy,
+  FileCheck,
+  FileX,
+  GraduationCap,
+  Layers,
+  PlayCircle,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  copyExam,
   deleteExam,
   getExams,
-  getResults,
-  initStore,
   getSession,
+  initStore,
 } from "@/lib/store";
-import {
-  STATUS_LABELS,
-  STATUS_STYLES,
-  examStatus,
-  formatDateTime,
-} from "@/lib/helpers";
-import type { Exam, ExamResult } from "@/lib/types";
+import { PHASE_LABELS, PHASE_STYLES, currentAcademicYear } from "@/lib/helpers";
+import type { Exam, ExamPhase } from "@/lib/types";
 
 export default function ExamsPage() {
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
-  const [results, setResults] = useState<ExamResult[]>([]);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (!getSession()) {
@@ -32,10 +45,19 @@ export default function ExamsPage() {
     const t = setTimeout(() => {
       initStore();
       setExams(getExams());
-      setResults(getResults());
     }, 0);
     return () => clearTimeout(t);
   }, [router]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return exams;
+    return exams.filter(
+      (e) =>
+        e.title.toLowerCase().includes(q) ||
+        (e.code ?? "").toLowerCase().includes(q),
+    );
+  }, [exams, search]);
 
   const handleDelete = (exam: Exam) => {
     if (
@@ -45,100 +67,216 @@ export default function ExamsPage() {
     ) {
       deleteExam(exam.id);
       setExams(getExams());
-      setResults(getResults());
     }
+  };
+
+  const handleCopy = (exam: Exam) => {
+    copyExam(exam.id);
+    setExams(getExams());
   };
 
   return (
     <div className="space-y-6">
-      {/* Səhifə başlığı */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* ===== Səhifə başlığı ===== */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">İmtahanlar</h1>
-          <p className="text-sm text-slate-500">
-            Bütün imtahanların siyahısı — açıq, gözləmədə və bitmiş.
+          <h1 className="text-2xl font-bold text-slate-900">İmtahanlar</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Kitabça hazırlığı və idarəsi
           </p>
         </div>
-        <Link
-          href="/account/exams/new"
-          className="inline-flex items-center gap-2 rounded-md bg-[#4a1c2c] px-4 py-2 text-sm font-medium text-white hover:bg-[#381420] transition-colors"
-        >
-          <Plus className="size-4" />
-          Yeni imtahan
-        </Link>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Axtarış */}
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Axtar..."
+              aria-label="İmtahan axtar"
+              className="w-56 pl-9"
+            />
+          </div>
+
+          <Button variant="outline" asChild className="gap-1.5">
+            <Link href="/">
+              <PlayCircle className="size-4" />
+              İmtahana başlama səhifəsi
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            className="gap-1.5 bg-[#4a1c2c] text-white hover:bg-[#381420]"
+          >
+            <Link href="/account/exams/new">
+              <Plus className="size-4" />
+              Yeni İmtahan
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {exams.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <p className="text-sm text-slate-500">
-            Hələ imtahan yaradılmayıb.{" "}
-            <Link href="/account/exams/new" className="text-[#4a1c2c] hover:underline font-medium">
-              Yeni imtahan yaradın
-            </Link>
-            .
+      {/* ===== Kart grid ===== */}
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+          <span className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-slate-100">
+            <ClipboardList className="size-6 text-slate-400" />
+          </span>
+          <p className="text-sm font-medium text-slate-700">
+            {exams.length === 0
+              ? "Hələ imtahan yoxdur"
+              : "Axtarışa uyğun imtahan tapılmadı"}
           </p>
+          {exams.length === 0 && (
+            <p className="mt-1 text-xs text-slate-500">
+              İlk kitabçanı yaratmaq üçün yeni imtahan əlavə edin.
+            </p>
+          )}
+          {exams.length === 0 && (
+            <Button
+              asChild
+              className="mt-5 gap-1.5 bg-[#4a1c2c] text-white hover:bg-[#381420]"
+            >
+              <Link href="/account/exams/new">
+                <Plus className="size-4" />
+                Yeni İmtahan
+              </Link>
+            </Button>
+          )}
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 text-left text-xs text-slate-500">
-                <th className="px-6 py-3.5 font-medium">Ad</th>
-                <th className="px-4 py-3.5 font-medium">Müddət</th>
-                <th className="px-4 py-3.5 font-medium">Suallar</th>
-                <th className="px-4 py-3.5 font-medium">İştirakçı</th>
-                <th className="px-4 py-3.5 font-medium">Vəziyyət</th>
-                <th className="px-6 py-3.5 font-medium text-right">Əməliyyat</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {exams.map((exam) => {
-                const status = examStatus(exam);
-                const partCount = results.filter((r) => r.examId === exam.id).length;
-                return (
-                  <tr key={exam.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4">
-                      <p className="font-medium text-slate-900">{exam.title}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        {formatDateTime(exam.startsAt)} – {formatDateTime(exam.endsAt)}
-                      </p>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-slate-700">
-                      {exam.durationMin} dəq
-                    </td>
-                    <td className="px-4 py-4 text-slate-700">{exam.questions.length}</td>
-                    <td className="px-4 py-4 text-slate-700">{partCount}</td>
-                    <td className="px-4 py-4">
-                      <span
-                        className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          STATUS_STYLES[status]
-                        }`}
-                      >
-                        {STATUS_LABELS[status]}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
-                      <Link
-                        href={`/account/exams/${exam.id}`}
-                        className="mr-4 text-sm font-medium text-[#4a1c2c] hover:underline"
-                      >
-                        Redaktə
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(exam)}
-                        className="text-sm font-medium text-red-600 hover:underline"
-                      >
-                        Sil
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((exam) => (
+            <ExamCard
+              key={exam.id}
+              exam={exam}
+              onCopy={() => handleCopy(exam)}
+              onDelete={() => handleDelete(exam)}
+            />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* İmtahan kartı                                                             */
+/* -------------------------------------------------------------------------- */
+
+function ExamCard({
+  exam,
+  onCopy,
+  onDelete,
+}: {
+  exam: Exam;
+  onCopy: () => void;
+  onDelete: () => void;
+}) {
+  const phase: ExamPhase = exam.status ?? "preparing";
+  const classBlock =
+    [exam.grade, exam.block || exam.subject].filter(Boolean).join(" - ") ||
+    exam.subject;
+  const year = exam.academicYear || currentAcademicYear();
+  const variants = exam.variants ?? 1;
+
+  return (
+    <Card className="group relative gap-0 rounded-xl border-slate-200 bg-white py-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+      <CardContent className="flex h-full flex-col p-5">
+        {/* Başlıq + rozet */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="line-clamp-2 min-h-[44px] text-base font-bold leading-snug text-slate-900">
+              {exam.title}
+            </h2>
+            <p className="mt-0.5 font-mono text-xs text-slate-400">
+              {exam.code ?? "—"}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1">
+            {/* Sil */}
+            <button
+              type="button"
+              onClick={onDelete}
+              title="İmtahanı sil"
+              aria-label={`${exam.title} imtahanını sil`}
+              className="card-action rounded-md p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:opacity-100 focus-visible:outline-none"
+            >
+              <Trash2 className="size-4" />
+            </button>
+
+            {/* Status rozeti */}
+            <Badge
+              variant="secondary"
+              className={`shrink-0 ${PHASE_STYLES[phase]}`}
+            >
+              {PHASE_LABELS[phase]}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Meta məlumatlar */}
+        <dl className="mt-4 space-y-2 text-sm">
+          <div className="flex items-center gap-2 text-slate-600">
+            <GraduationCap className="size-4 shrink-0 text-slate-400" />
+            <span className="truncate">{classBlock}</span>
+          </div>
+          <div className="flex items-center gap-2 text-slate-600">
+            <CalendarRange className="size-4 shrink-0 text-slate-400" />
+            <span className="truncate">{year}</span>
+          </div>
+          <div className="flex items-center gap-2 text-slate-600">
+            <Layers className="size-4 shrink-0 text-slate-400" />
+            <span className="truncate">
+              {variants} {variants === 1 ? "variant" : "variant"}
+            </span>
+          </div>
+        </dl>
+
+        {/* PDF vəziyyəti */}
+        <p
+          className={`mt-4 flex items-center gap-1.5 text-xs font-medium ${
+            exam.pdfReady ? "text-emerald-600" : "text-slate-400"
+          }`}
+        >
+          {exam.pdfReady ? (
+            <>
+              <FileCheck className="size-4" />
+              PDF hazır
+            </>
+          ) : (
+            <>
+              <FileX className="size-4" />
+              PDF yoxdur
+            </>
+          )}
+        </p>
+
+        {/* Əməliyyatlar */}
+        <div className="mt-auto flex items-center gap-2 border-t border-slate-100 pt-4">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onCopy}
+            className="gap-1.5 text-slate-700"
+          >
+            <Copy className="size-4" />
+            Kopyala
+          </Button>
+          <Button
+            asChild
+            className="ml-auto gap-1.5 bg-[#4a1c2c] text-white hover:bg-[#381420]"
+          >
+            <Link href={`/account/exams/${exam.id}`}>
+              Aç
+              <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

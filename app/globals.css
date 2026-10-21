@@ -67,3 +67,22 @@ body {
 input[type="datetime-local"] {
   color-scheme: light;
 }
+
+/* ===== Kart əməliyyat düymələri =====
+   Sil düyməsi yalnız kartın üstünə gələndə görünür. Tailwind-in `hover:`
+   variantları `@media (hover: hover)` içində gizləndiyi üçün touch cihazlarda
+   (planşet) düymə heç vaxt görünməzdi — buna görə media query-siz yazılır. */
+@media (min-width: 40rem) {
+  .card-action {
+    opacity: 0;
+    transition:
+      opacity 150ms ease,
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .group:hover .card-action,
+  .card-action:focus-visible {
+    opacity: 1;
+  }
+}

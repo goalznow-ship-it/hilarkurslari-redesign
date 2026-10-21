@@ -1,9 +1,11 @@
+import { currentAcademicYear } from "./helpers";
 import type {
   AdminSession,
   EntryData,
   Exam,
   ExamResult,
   Question,
+  User,
 } from "./types";
 
 const KEYS = {
@@ -12,6 +14,8 @@ const KEYS = {
   session: "kitabca.admin.session",
   entry: "kitabca.entry",
   bank: "kitabca.questionBank",
+  bankInit: "kitabca.questionBank.initAt",
+  users: "kitabca.users",
 };
 
 export const ADMIN_USER = "admin";
@@ -57,6 +61,13 @@ function seed(): Exam[] {
       durationMin: 20,
       ticketCodes: [],
       createdAt: iso(now),
+      status: "preparing",
+      code: "RIY-2026-001",
+      grade: "X Sinif",
+      block: "Blok",
+      academicYear: currentAcademicYear(now),
+      variants: 2,
+      pdfReady: false,
       questions: [
         {
           id: uid(),
@@ -117,6 +128,13 @@ function seed(): Exam[] {
       durationMin: 15,
       ticketCodes: [],
       createdAt: iso(now),
+      status: "review",
+      code: "FIZ-2026-002",
+      grade: "VIII Sinif",
+      block: "Blok",
+      academicYear: currentAcademicYear(now),
+      variants: 1,
+      pdfReady: true,
       questions: [
         {
           id: uid(),
@@ -164,6 +182,10 @@ function seedIfEmpty() {
   }
   if (!window.localStorage.getItem(KEYS.bank)) {
     writeJSON(KEYS.bank, seedBank());
+    window.localStorage.setItem(KEYS.bankInit, new Date().toISOString());
+  }
+  if (!window.localStorage.getItem(KEYS.users)) {
+    writeJSON(KEYS.users, seedUsers());
   }
 }
 
@@ -177,7 +199,57 @@ export function initStore() {
 
 export function getExams(): Exam[] {
   seedIfEmpty();
-  return readJSON<Exam[]>(KEYS.exams, []);
+  const list = readJSON<Exam[]>(KEYS.exams, []);
+
+  // Köhnə imtahanlarda yeni kitabça sahələri yoxdur — bir dəfəlik miqrasiya
+  let changed = false;
+  const normalized = list.map((exam, i) => {
+    if (exam.status && exam.code && exam.onlineEnabled !== undefined) return exam;
+    changed = true;
+    return {
+      ...exam,
+      status: exam.status ?? "preparing",
+      code: exam.code ?? generateExamCode(exam, i),
+      grade: exam.grade ?? "",
+      block: exam.block ?? "",
+      academicYear: exam.academicYear ?? currentAcademicYear(),
+      variants: exam.variants ?? 1,
+      pdfReady: exam.pdfReady ?? false,
+      onlineEnabled: exam.onlineEnabled ?? false,
+    };
+  });
+  if (changed) writeJSON(KEYS.exams, normalized);
+  return normalized;
+}
+
+function generateExamCode(exam: Exam, index: number): string {
+  const word = (exam.subject || "IMT").trim().split(/\s+/)[0] || "IMT";
+  const letters = word.replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase() || "IMT";
+  const year = new Date(exam.createdAt || Date.now()).getFullYear();
+  return `${letters}-${year}-${String(index + 1).padStart(3, "0")}`;
+}
+
+/** İmtahanı kopyalayıb koduna "-kopya" əlavə edərək yenisini yaradır */
+export function copyExam(id: string): Exam | undefined {
+  const exams = getExams();
+  const source = exams.find((e) => e.id === id);
+  if (!source) return undefined;
+
+  const copy: Exam = {
+    ...source,
+    id: newId(),
+    code: `${source.code ?? ""}-kopya`,
+    questions: source.questions.map((q) => ({
+      ...q,
+      id: newId(),
+      options: [...q.options],
+    })),
+    createdAt: new Date().toISOString(),
+  };
+
+  exams.push(copy);
+  writeJSON(KEYS.exams, exams);
+  return copy;
 }
 
 export function getExam(id: string): Exam | undefined {
@@ -282,7 +354,22 @@ export function getQuestionBank(): Question[] {
   if (!window.localStorage.getItem(KEYS.bank)) {
     writeJSON(KEYS.bank, seedBank());
   }
-  return readJSON<Question[]>(KEYS.bank, []);
+  const list = readJSON<Question[]>(KEYS.bank, []);
+  const initAt = window.localStorage.getItem(KEYS.bankInit) || new Date().toISOString();
+
+  // Köhnə məlumatlarda createdAt / verification yoxdur — bir dəfəlik normalizasiya
+  let changed = false;
+  const normalized = list.map((q) => {
+    if (q.createdAt && q.verification) return q;
+    changed = true;
+    return {
+      ...q,
+      createdAt: q.createdAt ?? initAt,
+      verification: q.verification ?? "verified",
+    };
+  });
+  if (changed) writeJSON(KEYS.bank, normalized);
+  return normalized;
 }
 
 export function saveQuestionBank(list: Question[]) {
@@ -292,12 +379,59 @@ export function saveQuestionBank(list: Question[]) {
 export function addQuestionToBank(q: Question) {
   const bank = getQuestionBank();
   if (bank.some((b) => b.text.trim() === q.text.trim())) return;
-  bank.push({ ...q, id: newId() });
+  bank.push({
+    ...q,
+    id: newId(),
+    createdAt: q.createdAt ?? new Date().toISOString(),
+    verification: q.verification ?? "verified",
+  });
   saveQuestionBank(bank);
 }
 
 export function deleteQuestionFromBank(id: string) {
   saveQuestionBank(getQuestionBank().filter((q) => q.id !== id));
+}
+
+// ---------------------------------------------------------------------------
+// İstifadəçilər (müəllim / koordinator)
+// ---------------------------------------------------------------------------
+
+export function getUsers(): User[] {
+  seedIfEmpty();
+  return readJSON<User[]>(KEYS.users, []);
+}
+
+function seedUsers(): User[] {
+  return [
+    {
+      id: "u-admin",
+      name: "Admin",
+      email: "admin@hilalkurslari.az",
+      role: "admin",
+      active: true,
+    },
+    {
+      id: "u-coord-1",
+      name: "Aysel Qasımova",
+      email: "aysel@hilalkurslari.az",
+      role: "coordinator",
+      active: true,
+    },
+    {
+      id: "u-coord-2",
+      name: "Elvin Məmmədov",
+      email: "elvin@hilalkurslari.az",
+      role: "coordinator",
+      active: true,
+    },
+    {
+      id: "u-teach-1",
+      name: "Nərmin Əliyeva",
+      email: "nermin@hilalkurslari.az",
+      role: "teacher",
+      active: false,
+    },
+  ];
 }
 
 function seedBank(): Question[] {

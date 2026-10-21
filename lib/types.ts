@@ -6,6 +6,8 @@ export type Question = {
   subject?: string;
   grade?: string; // sinif, məs. "X sinif"
   difficulty?: "Asan" | "Orta" | "Çətin";
+  createdAt?: string; // ISO string — banka əlavə olunma vaxtı
+  verification?: "pending" | "verified"; // təsdiq vəziyyəti
 };
 
 export type Exam = {
@@ -18,6 +20,14 @@ export type Exam = {
   questions: Question[];
   ticketCodes: string[]; // boş olsa — istənilən keçərli format qəbul edilir
   createdAt: string;
+  status: ExamPhase; // kitabçanın hazırlıq vəziyyəti
+  code?: string; // imtahan kodu, məs. "RIY-2026-001"
+  grade?: string; // sinif, məs. "X Sinif"
+  block?: string; // blok, məs. "Blok"
+  academicYear?: string; // tədris ili, məs. "2026-2027"
+  variants?: number; // variant sayı
+  pdfReady?: boolean; // PDF çapı hazır olub olmaması
+  onlineEnabled?: boolean; // onlayn rejimdə şagirdlərə açıq olub olmaması
 };
 
 export type ExamResult = {
@@ -48,3 +58,16 @@ export type EntryData = {
 };
 
 export type ExamStatus = "planned" | "active" | "ended";
+
+/** Kitabçanın hazırlıq vəziyyəti (admin panelindəki status rozeti) */
+export type ExamPhase = "preparing" | "first_ready" | "review" | "done";
+
+export type UserRole = "admin" | "coordinator" | "teacher";
+
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  active: boolean;
+};

@@ -18,6 +18,7 @@ import {
   LogOut,
   Menu,
   Users,
+  Wifi,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,11 @@ const NAV_GROUPS = [
     items: [
       { href: "/account", label: "İdarəetmə Paneli", icon: LayoutDashboard },
       { href: "/account/reports", label: "Hesabatlıq", icon: BarChart3 },
+      {
+        href: "/account/online-exams",
+        label: "Onlayn İmtahanlar",
+        icon: Wifi,
+      },
     ],
   },
   {

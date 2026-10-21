@@ -24,6 +24,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 import {
@@ -32,8 +39,8 @@ import {
   newId,
   saveExam,
 } from "@/lib/store";
-import { formatDateTimeLocal } from "@/lib/helpers";
-import type { Exam, Question } from "@/lib/types";
+import { currentAcademicYear, formatDateTimeLocal, PHASE_LABELS, PHASE_ORDER } from "@/lib/helpers";
+import type { Exam, ExamPhase, Question } from "@/lib/types";
 
 export type ExamFormMode = "create" | "edit";
 
@@ -44,6 +51,14 @@ type EditorState = {
   endsAt: string;
   durationMin: string;
   ticketCodes: string;
+  code: string;
+  status: ExamPhase;
+  grade: string;
+  block: string;
+  academicYear: string;
+  variants: string;
+  pdfReady: boolean;
+  onlineEnabled: boolean;
 };
 
 let questionSeq = 0;
@@ -61,6 +76,14 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
     endsAt: exam ? formatDateTimeLocal(exam.endsAt) : "",
     durationMin: String(exam?.durationMin ?? 20),
     ticketCodes: exam?.ticketCodes.join(", ") ?? "",
+    code: exam?.code ?? "",
+    status: exam?.status ?? "preparing",
+    grade: exam?.grade ?? "",
+    block: exam?.block ?? "",
+    academicYear: exam?.academicYear ?? currentAcademicYear(),
+    variants: String(exam?.variants ?? 1),
+    pdfReady: exam?.pdfReady ?? false,
+    onlineEnabled: exam?.onlineEnabled ?? false,
   }));
 
   const [questions, setQuestions] = useState<Question[]>(
@@ -204,6 +227,14 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
         ticketCodes: tickets,
         questions,
         createdAt: exam?.createdAt ?? new Date().toISOString(),
+        status: state.status,
+        code: state.code.trim() || undefined,
+        grade: state.grade.trim(),
+        block: state.block.trim(),
+        academicYear: state.academicYear.trim(),
+        variants: Math.max(1, parseInt(state.variants, 10) || 1),
+        pdfReady: state.pdfReady,
+        onlineEnabled: state.onlineEnabled,
       },
       isEdit,
     );
@@ -299,6 +330,128 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
             açıq olur. Bilet kodları sahəsi boş olarsa, istənilən keçərli
             formatlı kod qəbul edilir.
           </p>
+        </CardContent>
+      </Card>
+
+      {/* ===== Kitabça məlumatları ===== */}
+      <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-base text-[#4a1c2c]">
+            Kitabça məlumatları
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="code">İmtahan kodu</Label>
+              <Input
+                id="code"
+                value={state.code}
+                onChange={(e) => setField("code", e.target.value)}
+                placeholder="Məs: RIY-2026-001"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="status">Hazırlıq vəziyyəti</Label>
+              <Select
+                value={state.status}
+                onValueChange={(v) =>
+                  setState((s) => ({ ...s, status: v as ExamPhase }))
+                }
+              >
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="Vəziyyət" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PHASE_ORDER.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {PHASE_LABELS[p]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="grade">Sinif</Label>
+              <Input
+                id="grade"
+                value={state.grade}
+                onChange={(e) => setField("grade", e.target.value)}
+                placeholder="Məs: X Sinif"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="block">Blok</Label>
+              <Input
+                id="block"
+                value={state.block}
+                onChange={(e) => setField("block", e.target.value)}
+                placeholder="Məs: Blok"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-2">
+              <Label htmlFor="academicYear">Tədris ili</Label>
+              <Input
+                id="academicYear"
+                value={state.academicYear}
+                onChange={(e) => setField("academicYear", e.target.value)}
+                placeholder="Məs: 2026-2027"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="variants">Variant sayı</Label>
+              <Input
+                id="variants"
+                type="number"
+                min={1}
+                max={50}
+                value={state.variants}
+                onChange={(e) => setField("variants", e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="pdfReady">PDF çapı</Label>
+              <Select
+                value={state.pdfReady ? "ready" : "none"}
+                onValueChange={(v) =>
+                  setState((s) => ({ ...s, pdfReady: v === "ready" }))
+                }
+              >
+                <SelectTrigger id="pdfReady">
+                  <SelectValue placeholder="PDF" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ready">PDF hazırdır</SelectItem>
+                  <SelectItem value="none">PDF yoxdur</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-slate-50/60 px-3.5 py-3">
+            <Checkbox
+              checked={state.onlineEnabled}
+              onCheckedChange={(v) =>
+                setState((s) => ({ ...s, onlineEnabled: v === true }))
+              }
+              className="mt-0.5"
+            />
+            <span className="min-w-0">
+              <span className="block text-sm font-medium text-slate-800">
+                Onlayn aktiv
+              </span>
+              <span className="block text-xs text-slate-500">
+                İmtahan onlayn rejimdə aktivləşdirilir — şagirdlər
+                /online-exam səhifəsindən FIN və bilet kodu ilə daxil olmaq mümkündür.
+              </span>
+            </span>
+          </label>
         </CardContent>
       </Card>
 
