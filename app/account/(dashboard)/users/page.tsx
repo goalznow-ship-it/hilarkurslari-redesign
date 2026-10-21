@@ -4,10 +4,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ShieldCheck, UserCog, Users } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { getSession, getUsers } from "@/lib/store";
 import type { User, UserRole } from "@/lib/types";
+
+import {
+  Badge,
+  Card,
+  CardContent,
+  CardHeader,
+} from "@/components/ui";
 
 const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Administrator",
@@ -95,7 +100,7 @@ export default function UsersPage() {
                     </p>
                   </div>
 
-                  <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                  <Badge variant={user.role === "admin" ? "default" : "neutral"}>
                     {ROLE_LABELS[user.role]}
                   </Badge>
 

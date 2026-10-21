@@ -1,29 +1,26 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+// Inter — latin-ext altçəkilməsi Azərbaycan hərflərini (ə, ı, ö, ü, ş, ç, ğ, İ) qapsayır
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Kitabça Sistemi — İmtahan Portalı",
-  description: "Onlayn imtahan portalı: şagirdlər imtahana daxil olur, nəticələr avtomatik yoxlanılır.",
+  title: "Kitabça — Hilal Kursları",
+  description:
+    "Azərbaycan dilində onlayn imtahan platforması: tələbələr imtahana daxil olur, nəticələr avtomatik yoxlanılır.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="az"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-gray-50 text-gray-900">{children}</body>
+    <html lang="az" className={`${inter.variable} h-full antialiased`}>
+      <body className="min-h-full bg-neutral-50 text-neutral-900">
+        {children}
+      </body>
     </html>
   );
 }

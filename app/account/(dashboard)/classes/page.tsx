@@ -13,29 +13,29 @@ import {
   Users,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { currentAcademicYear } from "@/lib/helpers";
+import { deleteClass, getClasses, getSession, saveClass } from "@/lib/store";
+import type { SchoolClass } from "@/lib/types";
+
 import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { currentAcademicYear } from "@/lib/helpers";
-import { deleteClass, getClasses, getSession, saveClass } from "@/lib/store";
-import type { SchoolClass } from "@/lib/types";
+} from "@/components/ui";
 
 const GRADES = [
   "V sinif",
@@ -296,7 +296,7 @@ export default function ClassesPage() {
                         )}
                       </td>
                       <td className="px-4 py-4">
-                        <Badge variant="secondary">{c.grade}</Badge>
+                        <Badge variant="neutral">{c.grade}</Badge>
                       </td>
                       <td className="px-4 py-4 text-slate-700">{c.teacher}</td>
                       <td className="px-4 py-4 text-slate-700 tabular-nums">

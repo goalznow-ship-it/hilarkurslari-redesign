@@ -10,10 +10,11 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -21,19 +22,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
+  Input,
+  Label,
+  RadioGroup,
+  RadioGroupItem,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-
+  Textarea,
+} from "@/components/ui";
 import {
   deleteQuestionFromBank,
   getQuestionBank,
@@ -56,11 +55,13 @@ const GRADES = ["V sinif", "VI sinif", "VII sinif", "VIII sinif", "IX sinif", "X
 
 const DIFFICULTIES: Array<"Asan" | "Orta" | "Çətin"> = ["Asan", "Orta", "Çətin"];
 
-function difficultyVariant(d?: string): "success" | "warning" | "destructive" | "secondary" {
+function difficultyVariant(
+  d?: string,
+): "success" | "warning" | "danger" | "neutral" {
   if (d === "Asan") return "success";
   if (d === "Orta") return "warning";
-  if (d === "Çətin") return "destructive";
-  return "secondary";
+  if (d === "Çətin") return "danger";
+  return "neutral";
 }
 
 function blankQuestion(): Question {
@@ -282,7 +283,7 @@ export default function QuestionsPage() {
                       {q.subject}
                     </Badge>
                   )}
-                  {q.grade && <Badge variant="secondary">{q.grade}</Badge>}
+                  {q.grade && <Badge variant="neutral">{q.grade}</Badge>}
                   {q.difficulty && (
                     <Badge variant={difficultyVariant(q.difficulty)}>
                       {q.difficulty}

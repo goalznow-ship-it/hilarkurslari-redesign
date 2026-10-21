@@ -6,25 +6,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, BookOpen, Info, Lock, User } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import {
+  Button,
   Card,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-
+} from "@/components/ui";
 import {
   findResultByParticipant,
   getExams,

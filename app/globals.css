@@ -1,38 +1,142 @@
 @import "tailwindcss";
 
-/* Hilal brend tokenları (Tailwind v4 + shadcn) */
+/* ==========================================================================
+   Hilal Kursları — dizayn tokenları
+   Brend: bordo (#4A1A2C) + qızılı aksent. Hissiyyat: ciddi, sakit, etibarlı.
+   ========================================================================== */
+
+@theme {
+  /* --- Bordo şkalası (brend) ------------------------------------------- */
+  --color-brand-50: #faf6f8;
+  --color-brand-100: #f3e9ed;
+  --color-brand-200: #e4cdd6;
+  --color-brand-300: #cda9b8;
+  --color-brand-400: #b17b8f;
+  --color-brand-500: #8a4a63;
+  --color-brand-600: #6e3450;
+  --color-brand-700: #4a1a2c; /* brend əsası */
+  --color-brand-800: #3a1524;
+  --color-brand-900: #26101a;
+
+  /* --- Qızılı aksent (səhifə vurğusu, ikincil CTA) ---------------------- */
+  --color-gold-50: #fdf8ec;
+  --color-gold-100: #f9edcf;
+  --color-gold-200: #f0d99c;
+  --color-gold-300: #e5c169;
+  --color-gold-400: #d4a63f;
+  --color-gold-500: #b8862a;
+  --color-gold-600: #966a1c;
+  --color-gold-700: #6f4d13;
+
+  /* --- Neytral şkala (isti boz) ----------------------------------------- */
+  --color-neutral-50: #faf9f8;
+  --color-neutral-100: #f4f2f1;
+  --color-neutral-200: #e8e5e3;
+  --color-neutral-300: #d6d1ce;
+  --color-neutral-400: #ada6a1;
+  --color-neutral-500: #6f6760; /* placeholder/ikincil mətn — 5.1:1 */
+  --color-neutral-600: #57504a;
+  --color-neutral-700: #403a35;
+  --color-neutral-800: #2a2622;
+  --color-neutral-900: #1b1817;
+
+  /* --- Semantik rənglər -------------------------------------------------- */
+  --color-success: #0f7355;
+  --color-success-soft: #e7f4ee;
+  --color-success-fg: #0b5a42; /* soft üzərində 7:1+ */
+  --color-warning: #a96b0e;
+  --color-warning-soft: #fcf3e2;
+  --color-warning-fg: #8a5608;
+  --color-danger: #b3261e;
+  --color-danger-soft: #fbeae8;
+  --color-danger-fg: #97201a;
+  --color-info: #1f5fa8;
+  --color-info-soft: #eaf1fa;
+  --color-info-fg: #1a5493;
+
+  /* --- Tipoqrafiya: yalnız 5 ölçü ---------------------------------------- */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-stack), ui-monospace, "SF Mono", monospace;
+
+  --text-xs: 0.75rem; /* 12 */
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem; /* 14 */
+  --text-sm--line-height: 1.5;
+  --text-base: 1rem; /* 16 */
+  --text-base--line-height: 1.6;
+  --text-lg: 1.25rem; /* 20 */
+  --text-lg--line-height: 1.4;
+  --text-xl: 1.75rem; /* 28 */
+  --text-xl--line-height: 1.25;
+  /* Böyük ölçülər yoxdur — 2xl/3xl 28px-ə eynilənir */
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 1.75rem;
+  --text-3xl--line-height: 1.25;
+  --text-4xl: 1.75rem;
+  --text-4xl--line-height: 1.25;
+
+  /* --- Radius: 8 / 12 / 16 ------------------------------------------------ */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 16px;
+  --radius-2xl: 16px;
+  --radius-3xl: 16px;
+
+  /* --- Kölgə: 3 səviyyə (tintlənmiş, qara deyil) -------------------------- */
+  --shadow-xs: 0 1px 2px rgb(38 16 26 / 0.06);
+  --shadow-sm:
+    0 1px 3px rgb(38 16 26 / 0.07), 0 1px 2px rgb(38 16 26 / 0.04);
+  --shadow-md:
+    0 12px 28px -12px rgb(38 16 26 / 0.18), 0 2px 6px rgb(38 16 26 / 0.05);
+  --shadow-lg:
+    0 24px 48px -20px rgb(38 16 26 / 0.22), 0 4px 10px rgb(38 16 26 / 0.06);
+
+  /* --- Spacing: 4px əsaslı ---------------------------------------------- */
+  --spacing: 0.25rem;
+
+  /* --- Animasiya: 150–250ms --------------------------------------------- */
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-fade-up: fade-up 200ms var(--ease-out-soft) both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+}
+
+/* ==========================================================================
+   shadcn uyğunluq qatı — semantik tokenlar yeni palitraya bağlanır
+   ========================================================================== */
+
 :root {
-  --background: #f8fafc;
-  --foreground: #2b2024;
+  --background: var(--color-neutral-50);
+  --foreground: var(--color-neutral-900);
 
   --card: #ffffff;
-  --card-foreground: #2b2024;
+  --card-foreground: var(--color-neutral-900);
 
-  --primary: #4a1c2c;
+  --primary: var(--color-brand-700);
   --primary-foreground: #ffffff;
 
-  --secondary: #f3eff1;
-  --secondary-foreground: #4a1c2c;
+  --secondary: var(--color-neutral-100);
+  --secondary-foreground: var(--color-brand-700);
 
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted: var(--color-neutral-100);
+  --muted-foreground: var(--color-neutral-500);
 
-  --accent: #f6f1f3;
-  --accent-foreground: #4a1c2c;
+  --accent: var(--color-brand-50);
+  --accent-foreground: var(--color-brand-700);
 
-  --destructive: #dc2626;
+  --destructive: var(--color-danger);
   --destructive-foreground: #ffffff;
 
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #4a1c2c;
+  --border: var(--color-neutral-200);
+  --input: var(--color-neutral-300);
+  --ring: var(--color-brand-600);
 
   --popover: #ffffff;
-  --popover-foreground: #2b2024;
+  --popover-foreground: var(--color-neutral-900);
 }
 
 @theme inline {
-  /* shadcn deyərişlikləri -> Tailwind rəng yapışlandırımları */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -52,15 +156,89 @@
   --color-ring: var(--ring);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+}
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ==========================================================================
+   Baza
+   ========================================================================== */
+
+html {
+  color-scheme: light;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-brand-200);
+  color: var(--color-brand-900);
+}
+
+/* Placeholder kontrastı ≥ 4.5:1 (neutral-500 = 5.1:1 ağ üzərində) */
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-neutral-500);
+  opacity: 1;
+}
+
+/* Vahid fokus halqası — bütün interaktiv elementlərdə */
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Rəqəmlər üçün tabular — sütunlar düz dayansın */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nümunə (skeleton) xətt */
+.shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-neutral-100) 0%,
+    var(--color-neutral-200) 40%,
+    var(--color-neutral-100) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hərəkət azaltma — istifadəçi seçimi */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* datetime-local input görünüşünün sabitliyi */
@@ -68,21 +246,18 @@ input[type="datetime-local"] {
   color-scheme: light;
 }
 
-/* ===== Kart əməliyyat düymələri =====
-   Sil düyməsi yalnız kartın üstünə gələndə görünür. Tailwind-in `hover:`
-   variantları `@media (hover: hover)` içində gizləndiyi üçün touch cihazlarda
-   (planşet) düymə heç vaxt görünməzdi — buna görə media query-siz yazılır. */
-@media (min-width: 40rem) {
-  .card-action {
-    opacity: 0;
-    transition:
-      opacity 150ms ease,
-      background-color 150ms ease,
-      color 150ms ease;
-  }
+/* ==========================================================================
+   Yardımçı siniflər
+   ========================================================================== */
 
-  .group:hover .card-action,
-  .card-action:focus-visible {
-    opacity: 1;
-  }
+/* Qrafik boş vəziyyəti — nümunə xətt */
+.dashed-empty {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-neutral-300) 0 6px,
+    transparent 6px 12px
+  );
+  background-position: bottom;
+  background-repeat: repeat-x;
+  background-size: 100% 1px;
 }

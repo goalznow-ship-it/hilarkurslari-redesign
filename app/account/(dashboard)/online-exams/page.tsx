@@ -14,11 +14,15 @@ import {
   Wifi,
 } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { getExams, getResults, getSession, initStore } from "@/lib/store";
 import { examStatus, formatDateTime } from "@/lib/helpers";
 import type { Exam, ExamResult } from "@/lib/types";
+
+import {
+  Card,
+  CardContent,
+  Input,
+} from "@/components/ui";
 
 type OnlineState = "active" | "planned" | "ended" | "not_setup";
 

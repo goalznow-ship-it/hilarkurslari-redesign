@@ -30,16 +30,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   getExams,
@@ -51,6 +41,19 @@ import {
 } from "@/lib/store";
 import { examStatus, formatDateTime } from "@/lib/helpers";
 import type { Exam, ExamResult, Question, User } from "@/lib/types";
+
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui";
 
 /* -------------------------------------------------------------------------- */
 /* Sabitlər                                                                  */
@@ -609,7 +612,7 @@ export default function AdminDashboardPage() {
                             className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/70 px-3 py-2"
                           >
                             {q.subject && (
-                              <Badge variant="secondary" className="shrink-0">
+                              <Badge variant="neutral" className="shrink-0">
                                 {q.subject}
                               </Badge>
                             )}
