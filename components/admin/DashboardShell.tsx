@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ClipboardList,
   Command,
+  CreditCard,
   FileCheck2,
   FileQuestion,
   LayoutDashboard,
@@ -35,8 +36,9 @@ import {
   DialogDescription,
   Input,
 } from "@/components/ui";
+import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { clearSession, getSession } from "@/lib/store";
+import { clearSession, getCurrentUser, canAccessPage } from "@/lib/store";
 
 const NAV_GROUPS = [
   {
@@ -77,11 +79,18 @@ const NAV_GROUPS = [
       },
     ],
   },
+  {
+    label: "SATIŞ",
+    items: [
+      { href: "/account/seller-sales", label: "Bilet Satışı", icon: CreditCard },
+    ],
+  },
 ];
 
 const BREADCRUMB: Record<string, { section: string; page: string }> = {
   "/account": { section: "Kitabça", page: "İdarəetmə Paneli" },
   "/account/reports": { section: "Kitabça", page: "Hesabatlıq" },
+  "/account/seller-sales": { section: "Satış", page: "Bilet Satışı" },
   "/account/online-exams": { section: "Kitabça", page: "Onlayn İmtahanlar" },
   "/account/companies": { section: "Təşkilat", page: "Şirkətlər" },
   "/account/years": { section: "Təşkilat", page: "Tədris İlləri" },
@@ -106,6 +115,7 @@ export default function DashboardShell({
   const pathname = usePathname();
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [notiOpen, setNotiOpen] = useState(false);
@@ -113,21 +123,22 @@ export default function DashboardShell({
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState("");
 
-  // Sessiya qorunsuzluğu — login olmayan istifadəçi loginə yönləndirilir
+  // Active account and route permissions are rechecked on navigation and cross-tab changes.
   useEffect(() => {
-    const t = setTimeout(() => {
-      if (!getSession()) {
-        router.replace("/admin/login");
-        return;
-      }
-      // Sidebar vəziyyəti yadda saxlanılır
-      if (window.localStorage.getItem("kitabca.sidebar.collapsed") === "1") {
-        setCollapsed(true);
-      }
-      setReady(true);
-    }, 0);
-    return () => clearTimeout(t);
-  }, [router]);
+    const check = () => {
+      try {
+        const account = getCurrentUser();
+        setUser(account ?? null);
+        if (!account) { setReady(false); router.replace("/admin/login"); return; }
+        if (!canAccessPage(account, pathname)) { setReady(false); router.replace(account.role === "seller" ? "/account/seller-sales" : "/account"); return; }
+        setCollapsed(window.localStorage.getItem("kitabca.sidebar.collapsed") === "1");
+        setReady(true);
+      } catch { setReady(false); router.replace("/admin/login"); }
+    };
+    const t = setTimeout(check, 0);
+    window.addEventListener("storage", check);
+    return () => { clearTimeout(t); window.removeEventListener("storage", check); };
+  }, [router, pathname]);
 
   // ⌘K / Ctrl+K — global axtarış
   useEffect(() => {
@@ -149,8 +160,8 @@ export default function DashboardShell({
   };
 
   const handleLogout = () => {
-    clearSession();
-    router.push("/admin/login");
+    try { clearSession(); setUser(null); setReady(false); router.push("/admin/login"); }
+    catch { alert("Çıxış yadda saxlanılmadı. Yenidən cəhd edin."); }
   };
 
   const crumb = useMemo(() => {
@@ -163,16 +174,17 @@ export default function DashboardShell({
 
   const paletteResults = useMemo(() => {
     const q = paletteQuery.trim().toLowerCase();
-    if (!q) return PAGE_INDEX;
-    return PAGE_INDEX.filter(
+    const pages = PAGE_INDEX.filter((item) => user && canAccessPage(user, item.href));
+    if (!q) return pages;
+    return pages.filter(
       (i) =>
         i.label.toLowerCase().includes(q) ||
         i.section.toLowerCase().includes(q),
     );
-  }, [paletteQuery]);
+  }, [paletteQuery, user]);
 
   return (
-    <div className="min-h-[100dvh] bg-neutral-50">
+    <div className="admin-shell min-h-[100dvh] bg-neutral-50">
       {/* ===== Sol Yan Menyu ===== */}
       <aside
         className={cn(
@@ -184,27 +196,26 @@ export default function DashboardShell({
         {/* Loqo + collapse */}
         <div
           className={cn(
-            "flex h-16 items-center border-b border-neutral-200 px-4",
+            "flex h-20 items-center border-b border-neutral-200/70 px-4",
             collapsed ? "justify-center px-0" : "justify-between",
           )}
         >
           {!collapsed && (
-            <Link href="/account" className="shrink-0" aria-label="Kitabça — ana səhifə">
+            <Link href="/account" className="brand-lockup" aria-label="Kitabça — ana səhifə">
               <Image
-                src="/hilal-logo.png"
+                src="/hilal-original.png"
                 alt="Hilal Kursları"
-                width={768}
-                height={240}
+                width={44}
+                height={44}
                 priority
-                className="h-auto w-[128px]"
+                className="size-11 object-contain"
               />
+              <span><strong>Hilal Kursları</strong><small>İdarəetmə paneli</small></span>
             </Link>
           )}
           {collapsed && (
             <Link href="/account" aria-label="Kitabça — ana səhifə">
-              <span className="flex size-9 items-center justify-center rounded-md bg-brand-700 text-sm font-bold text-white">
-                H
-              </span>
+              <Image src="/hilal-original.png" alt="Hilal Kursları" width={40} height={40} />
             </Link>
           )}
           <button
@@ -224,13 +235,13 @@ export default function DashboardShell({
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="mb-5 last:mb-0">
               {!collapsed && (
-                <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-wider text-neutral-400 uppercase">
+                <p className="mb-1.5 px-3 text-[10px] font-semibold tracking-[0.14em] text-neutral-500 uppercase">
                   {group.label}
                 </p>
               )}
               {collapsed && <div className="mb-2 h-px bg-neutral-200" />}
               <ul className="space-y-0.5">
-                {group.items.map((item) => {
+                {group.items.filter((item) => user && canAccessPage(user, item.href)).map((item) => {
                   const active = pathname === item.href;
                   return (
                     <li key={item.href}>
@@ -243,7 +254,7 @@ export default function DashboardShell({
                           "relative flex items-center gap-3 rounded-md py-2 text-sm transition-colors duration-150",
                           collapsed ? "justify-center px-2" : "px-3",
                           active
-                            ? "bg-brand-50 font-medium text-brand-800"
+                            ? "bg-brand-100/70 font-semibold text-brand-800"
                             : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900",
                         )}
                       >
@@ -308,10 +319,10 @@ export default function DashboardShell({
               {!collapsed && (
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-sm font-medium text-neutral-800">
-                    Admin
+                    {user?.name ?? "Admin"}
                   </span>
                   <span className="truncate text-xs text-neutral-500">
-                    admin@hilalkurslari.az
+                    {user?.email}
                   </span>
                 </span>
               )}
@@ -326,10 +337,10 @@ export default function DashboardShell({
                 <div className="absolute right-0 bottom-full z-50 mb-2 w-56 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-md">
                   <div className="border-b border-neutral-100 px-4 py-3">
                     <p className="truncate text-sm font-medium text-neutral-900">
-                      Admin
+                      {user?.name ?? "Admin"}
                     </p>
                     <p className="truncate text-xs text-neutral-500">
-                      admin@hilalkurslari.az
+                      {user?.email}
                     </p>
                   </div>
                   <button
@@ -362,7 +373,7 @@ export default function DashboardShell({
         )}
       >
         {/* Yuxarı panel */}
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-neutral-200 bg-white/90 px-4 backdrop-blur md:px-6">
+        <header className="sticky top-0 z-30 flex h-20 items-center gap-4 border-b border-neutral-200 bg-white/90 px-4 backdrop-blur md:px-6">
           <button
             onClick={() => setSidebarOpen(true)}
             className="rounded-md p-2 text-neutral-600 transition-colors hover:bg-neutral-100 lg:hidden"
@@ -370,6 +381,8 @@ export default function DashboardShell({
           >
             <Menu className="size-5" />
           </button>
+
+          <Link href="/account" className="shrink-0 lg:hidden" aria-label="Hilal Kursları"><Image src="/hilal-original.png" alt="Hilal Kursları" width={30} height={30} /></Link>
 
           {/* Breadcrumb */}
           <nav aria-label="Yol" className="min-w-0 flex-1">
@@ -447,8 +460,8 @@ export default function DashboardShell({
         </header>
 
         {/* Əsas məzmun */}
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 md:py-8">
-          {ready ? children : null}
+        <main id="main-content" className="mx-auto w-full max-w-[1480px] min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">
+          {ready && user && canAccessPage(user, pathname) ? children : null}
         </main>
       </div>
 

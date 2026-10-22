@@ -15,6 +15,7 @@ import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
 import * as LabelPrimitive from "@radix-ui/react-label";
 import { Slot } from "@radix-ui/react-slot";
 import { Check, ChevronDown, ChevronUp, Loader2, X } from "lucide-react";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
 
 import { cn } from "@/lib/utils";
 
@@ -381,7 +382,7 @@ export function Badge({
     <span
       data-slot="badge"
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap",
+        "inline-flex items-center gap-1 rounded-sm px-2.5 py-1 text-xs font-medium whitespace-nowrap",
         "[&_svg:not([class*='size-'])]:size-3.5",
         badgeVariants[variant],
         className,
@@ -400,7 +401,7 @@ export function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "flex flex-col rounded-lg border border-neutral-200 bg-white shadow-xs",
+        "flex min-w-0 flex-col rounded-lg border border-neutral-200/80 bg-white shadow-xs",
         className,
       )}
       {...props}
@@ -428,7 +429,7 @@ export function CardTitle({
   return (
     <div
       data-slot="card-title"
-      className={cn("text-base font-semibold text-neutral-900", className)}
+      className={cn("text-base font-semibold tracking-tight text-neutral-900", className)}
       {...props}
     />
   );
@@ -774,7 +775,7 @@ export function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border border-neutral-200 bg-white p-6 shadow-lg outline-none",
+          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border border-neutral-200 bg-white p-6 shadow-lg outline-none",
           className,
         )}
         {...props}
@@ -822,7 +823,7 @@ export function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-base font-semibold text-neutral-900", className)}
+      className={cn("text-base font-semibold tracking-tight text-neutral-900", className)}
       {...props}
     />
   );
@@ -840,3 +841,55 @@ export function DialogDescription({
     />
   );
 }
+
+
+/* ==========================================================================
+   Tabs
+   ========================================================================== */
+
+export const Tabs = TabsPrimitive.Root;
+
+export const TabsList = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.List
+    ref={ref}
+    className={cn(
+      "inline-flex h-10 items-center justify-center rounded-md bg-neutral-100 p-1 text-neutral-500",
+      className
+    )}
+    {...props}
+  />
+));
+TabsList.displayName = TabsPrimitive.List.displayName;
+
+export const TabsTrigger = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.Trigger
+    ref={ref}
+    className={cn(
+      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/20 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-brand-700 data-[state=active]:shadow-sm",
+      className
+    )}
+    {...props}
+  />
+));
+TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
+
+export const TabsContent = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.Content
+    ref={ref}
+    className={cn(
+      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/20",
+      className
+    )}
+    {...props}
+  />
+));
+TabsContent.displayName = TabsPrimitive.Content.displayName;

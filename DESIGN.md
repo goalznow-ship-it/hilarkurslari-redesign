@@ -2,7 +2,7 @@
 
 **Aestetik istiqamət:** ciddi, sakit, etibarlı idarəetmə paneli — Linear/Stripe
 keyfiyyətində. İşıqlı neytral zəmin, bordo brend aksenti, qızılı ikincil vurğu.
-Dekorativ gradient yoxdur; rəng yalnız məna daşıyır.
+İctimai girişdə zəif blush və sərin pastel işıq ləkələri; paneldə sakit neytral fon.
 
 **Son yeniləmə:** 2026-10-21
 
@@ -21,9 +21,9 @@ Dekorativ gradient yoxdur; rəng yalnız məna daşıyır.
 | `brand-400` | `#b17b8f` | dekorativ |
 | `brand-500` | `#8a4a63` | ikincil brend |
 | `brand-600` | `#6e3450` | fokus halqası, hover |
-| `brand-700` | `#4a1a2c` | **əsas brend** — CTA, aktiv nav, link |
-| `brand-800` | `#3a1524` | CTA hover, tünd panel |
-| `brand-900` | `#26101a` | yan panel (canlı imtahanlar bloku) |
+| `brand-700` | `#480f30` | **əsas brend** — CTA, aktiv nav, link |
+| `brand-800` | `#380b25` | CTA hover, tünd panel |
+| `brand-900` | `#280b1c` | yan panel (canlı imtahanlar bloku) |
 
 ### Qızılı aksent — `gold-*`
 
@@ -52,7 +52,7 @@ progres/CTA · `gold-700` (#6f4d13) qızılı mətn üzərində.
 
 ## 2. Tipoqrafiya
 
-**Inter**, `latin-ext` altçəkilməsi ilə (`ə ı ö ü ş ç ğ İ` dəstəklənir).
+**Geist**, yerli Latin və Latin Extended font faylları ilə (`ə ı ö ü ş ç ğ İ` dəstəklənir).
 
 **Yalnız 5 ölçü** (`--text-*` tokenləri ilə məhdudlaşdırılıb):
 
@@ -110,12 +110,12 @@ Description/Content/Footer) · `Table` (+Header/Body/Row/Head/Cell) · `Skeleton
   Sabit “şirkət çipi” yoxdur — şirkət seçicisi yalnız səhifə başlığındadır.
 - Səhifə başlığı: solda başlıq + qısa izah, sağda **bir** əsas CTA və
   (müvafiq olduqda) tarix aralığı seçicisi.
-- Dashboard: canlı imtahanlar bloku ən yuxarıda (tünd `brand-800`), sonra 4 KPI,
+- Dashboard: 4 KPI eyni sırada, sonra ağ fonda canlı imtahanlar bloku,
   sonra qrafik + diqqət bloku, sonda sıralanmalı və səhifələnən cədvəl.
 
 **Tələbə səhifəsi**
-- Desktop: iki sütun — solda bordo brend paneli (qaydalar, “Uğurlar!”),
-  sağda forma. Mobil: tək sütun.
+- Desktop: üç sütun — solda başlıq və üç addım, mərkəzdə əsas giriş forması,
+  sağda imtahan haqqında məlumat. Tablet: iki sütun. Mobil: forma addımlardan əvvəl.
 - Validasiya `react-hook-form` + `zod`; xətalar inline, real `<label>` bağlantısı ilə.
 - Placeholder qısa və formatı göstərir (`AB12CD3`), uppercase/letter-spacing yoxdur.
 - Demo mətni yalnız `NODE_ENV !== "production"` olduqda görünür.
@@ -141,3 +141,17 @@ Description/Content/Footer) · `Table` (+Header/Body/Row/Head/Cell) · `Skeleton
 - Müəqqəli mətn (`lorem ipsum`, `John Doe`, `$99.99`) yoxdur.
 - Hər səhifədə yalnız bir əsas CTA.
 - Köhnə `#4a1c2c` hardcoded rəng və `slate-*` palitrası yoxdur — yalnız tokenlar.
+
+
+## 8. Vahid vizual yenilənmə
+
+- Orijinal dairəvi loqo: `/hilal-original.png`; təqdim edilmiş fayl dəyişdirilmədən istifadə olunur.
+- Brend əsası: `#480f30`; əsas mətn: `#30252b`; səhifə fonu: `#faf8f6`.
+- Ağ kartlar: 16px radius, incə isti boz sərhəd, bordo çalarlı zəif kölgə.
+- İctimai giriş kartı: 22px radius; əsas action 48px hündürlükdə.
+- Semantik yaşıl sage, xəbərdarlıq isti qızılı; məlumat rose. Parlaq mavi/bənövşəyi status yoxdur.
+- Geist fontları lokaldır; render və build zamanı Google Fonts sorğusu yoxdur.
+- Bütün panellər eyni sidebar, topbar və tokenları istifadə edir. Placeholder bölmələrə yeni funksionallıq əlavə edilmir.
+- Mobil dashboard cədvəli kartlara çevrilir; onlayn imtahanlar 1280px-dən aşağı kart siyahısıdır.
+- Dialoqlar ekran hündürlüyü ilə məhdudlaşır; uzun bilet siyahısı ayrıca sürüşür.
+- Tələbə forması, sessiyalar, bilet validasiyası, nəticələr və store dəyişdirilmir.

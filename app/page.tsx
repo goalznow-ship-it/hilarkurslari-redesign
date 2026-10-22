@@ -21,6 +21,7 @@ import { Button, Field, Input } from "@/components/ui";
 import {
   findResultByParticipant,
   getExams,
+  getExam,
   initStore,
   startExamSession,
 } from "@/lib/store";
@@ -73,7 +74,7 @@ export default function ExamEntryPage() {
   useEffect(() => {
     const t = setTimeout(() => {
       initStore();
-      const active = getExams().filter((e) => examStatus(e) === "active");
+      const active = getExams().filter((e) => e.onlineEnabled && e.questions.length > 0 && examStatus(e) === "active");
       setExams(active);
       if (active.length === 1) {
         setValue("examId", active[0].id, { shouldValidate: false });
@@ -103,8 +104,9 @@ export default function ExamEntryPage() {
     setServerError(null);
     setResultHref(null);
 
-    const exam = exams?.find((e) => e.id === values.examId);
-    if (!exam) {
+    try {
+    const exam = getExam(values.examId);
+    if (!exam?.onlineEnabled || !exam.questions.length) {
       setServerError("İmtahan tapılmadı.");
       return;
     }
@@ -137,8 +139,11 @@ export default function ExamEntryPage() {
       return;
     }
 
-    startExamSession(exam.id, finNorm, ticketNorm);
-    router.push("/online-exam");
+      startExamSession(exam.id, finNorm, ticketNorm);
+      router.push("/online-exam");
+    } catch (error) {
+      setServerError(error instanceof Error ? error.message : "İmtahana giriş saxlanılmadı. Yenidən cəhd edin.");
+    }
   });
 
   /* --- FİN: avtomatik böyük hərf, 7 simvol --- */
@@ -154,79 +159,44 @@ export default function ExamEntryPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-neutral-50 lg:grid lg:grid-cols-[1.05fr_1fr]">
-      {/* ===== Brend paneli (desktop) ===== */}
-      <aside className="hidden flex-col justify-between bg-brand-800 p-12 text-white lg:flex">
-        <div>
-          <Image
-            src="/hilal-logo-light.png"
-            alt="Hilal Kursları"
-            width={768}
-            height={240}
-            priority
-            className="h-auto w-[220px]"
-          />
-        </div>
+    <div className="student-portal min-h-[100dvh]">
+      <header className="portal-header">
+        <Link href="/" className="brand-lockup" aria-label="Hilal Kursları — ana səhifə">
+          <Image src="/hilal-original.png" alt="Hilal Kursları" width={48} height={48} priority />
+          <span><strong>Hilal Kursları</strong><small>Kitabça sistemi</small></span>
+        </Link>
+        <nav aria-label="Əsas naviqasiya" className="flex items-center gap-5 text-xs font-medium text-neutral-600">
+          <a href="#qaydalar" className="hidden hover:text-brand-700 sm:block">İmtahan qaydaları</a>
+          <a href="mailto:destek@hilalkurslari.az" className="hidden hover:text-brand-700 md:block">Kömək mərkəzi</a>
+          <Button asChild variant="secondary" size="sm"><Link href="/admin/login">Panel girişi <ArrowRight className="size-3.5" /></Link></Button>
+        </nav>
+      </header>
 
-        <div className="max-w-md">
-          <h1 className="text-xl font-semibold text-white">
-            Onlayn imtahan platforması
-          </h1>
-          <p className="mt-3 text-sm leading-relaxed text-brand-100/90">
-            Kitabça imtahanları bir yerə toplanır: tələbələr FİN və bilet
-            kodu ilə daxil olur, cavablar dərhal yoxlanılır, nəticələr isə
-            dərhesab yığılır.
-          </p>
-
-          <ul className="mt-8 space-y-4 text-sm text-brand-100/90">
-            <li className="flex gap-3">
-              <Clock3 className="mt-0.5 size-4 shrink-0 text-gold-300" />
-              Vaxt bitəndə cavablar avtomatik yekunlaşdırılır.
-            </li>
-            <li className="flex gap-3">
-              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-gold-300" />
-              Bütün cavablar cihazınızda, təhlükəsiz şəkildə saxlanılır.
-            </li>
-            <li className="flex gap-3">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-gold-300" />
-              Nəticənizi dərhal görür və təsdiq linki ilə paylaşırsınız.
-            </li>
-          </ul>
-        </div>
-
-        <p className="text-sm font-medium text-gold-300">Uğurlar!</p>
-      </aside>
-
-      {/* ===== Forma ===== */}
-      <main className="flex min-h-[100dvh] flex-col justify-center px-5 py-10 sm:px-8 lg:px-14">
-        <div className="mx-auto w-full max-w-md">
-          {/* Mobil brend */}
-          <div className="mb-8 flex items-center justify-between lg:hidden">
-            <Image
-              src="/hilal-logo.png"
-              alt="Hilal Kursları"
-              width={768}
-              height={240}
-              priority
-              className="h-auto w-[150px]"
-            />
+      <main id="main-content" className="portal-grid">
+        <section className="portal-intro" aria-labelledby="portal-title">
+          <p className="eyebrow">Hilal Kursları <span className="mx-2 text-brand-300">/</span> Şagird portalı</p>
+          <h1 id="portal-title">Biliklərini sına,<br /><span>uğurunu göstər.</span></h1>
+          <p className="mt-4 max-w-[32ch] text-sm leading-relaxed text-neutral-600">Onlayn imtahanına rahat və aydın şəkildə qoşul. Başlamaq üçün cəmi 3 addım.</p>
+          <div id="qaydalar" className="portal-steps scroll-mt-8">
+            <h2 className="font-semibold text-neutral-900">İmtahana giriş</h2>
+            <p className="mt-1 text-xs text-neutral-500">Məlumatlarını hazırla və davam et.</p>
+            <ol className="mt-5 space-y-5">
+              {[['İmtahanı seç', 'Açıq olan imtahanlardan iştirak edəcəyini seç.'], ['FİN kodunu yaz', 'Şəxsiyyət vəsiqəndəki 7 simvollu kodu daxil et.'], ['Bilet kodunu daxil et', 'Biletindəki kodu yaz və imtahana başla.']].map(([title, description], index) => (
+                <li key={title} className="flex gap-3"><span className="step-number">0{index + 1}</span><div><p className="text-sm font-medium">{title}</p><p className="mt-0.5 text-xs text-neutral-500">{description}</p></div></li>
+              ))}
+            </ol>
           </div>
-
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-neutral-900">
-                İmtahana giriş
-              </h2>
-              <p className="mt-1 text-sm text-neutral-500">
-                FİN və bilet kodunuzu daxil edin.
-              </p>
-            </div>
-            {process.env.NODE_ENV !== "production" && (
-              <BadgeDemo />
-            )}
+          <div className="mt-4 flex items-center gap-3 rounded-lg border border-neutral-200/80 bg-white/80 p-4 text-xs text-neutral-600">
+            <ShieldCheck className="size-5 shrink-0 text-success" /><span>FİN və bilet kodu ilə giriş<br /><span className="text-neutral-500">Məlumatlarını yoxla, imtahana hazır ol.</span></span>
           </div>
+        </section>
 
-          <form onSubmit={onSubmit} noValidate className="mt-8 space-y-5">
+        <section className="entry-card" aria-labelledby="entry-title">
+          <div className="flex justify-center"><span className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-[10px] font-semibold tracking-wide text-brand-700"><span className="size-1.5 rounded-full bg-success" />ONLAYN İMTAHAN</span></div>
+          <Image src="/hilal-original.png" alt="Hilal Kursları" width={72} height={72} priority className="mx-auto mt-5" />
+          <h2 id="entry-title" className="mt-4 text-center text-lg font-semibold">İmtahana xoş gəlmisən!</h2>
+          <p className="mt-1 text-center text-xs text-neutral-500">Məlumatlarını daxil et və imtahana başla.</p>
+          <form onSubmit={onSubmit} noValidate className="mt-6 space-y-5">
             {/* İmtahan seçimi — yalnız 1-dən çox aktiv imtahan varsa */}
             {needsExamChoice && (
               <Field
@@ -333,50 +303,25 @@ export default function ExamEntryPage() {
               disabled={exams === null || exams.length === 0}
               className="h-11 w-full"
             >
-              Daxil ol
+              İmtahana başla
               <ArrowRight />
             </Button>
           </form>
-
-          {/* Alt məlumat */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <Link
-              href="/admin/login"
-              className="text-neutral-500 underline-offset-4 transition-colors hover:text-brand-700 hover:underline"
-            >
-              Əməkdaş girişi
-            </Link>
-
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1.5 text-neutral-500">
-                {online ? (
-                  <Wifi className="size-3.5 text-success" />
-                ) : (
-                  <WifiOff className="size-3.5 text-danger" />
-                )}
-                {online ? "İnternet qoşuludur" : "İnternet yoxdur"}
-              </span>
-              <a
-                href="mailto:destek@hilalkurslari.az"
-                className="text-neutral-500 underline-offset-4 transition-colors hover:text-brand-700 hover:underline"
-              >
-                Kod işləmir? Dəstək
-              </a>
-            </div>
+          <div className="mt-5 flex items-center justify-center gap-2 text-xs text-neutral-500" aria-live="polite">
+            {online ? <Wifi className="size-3.5 text-success" /> : <WifiOff className="size-3.5 text-danger" />}
+            {online ? "İnternet qoşuludur" : "İnternet yoxdur"}
           </div>
+          {process.env.NODE_ENV !== "production" && <div className="mt-4"><BadgeDemo /><p className="mt-2 text-xs text-neutral-500">Demo məlumatlar bu brauzerdə saxlanılır.</p></div>}
+        </section>
 
-          {/* Əməkdaş qeydi (yalnız demo mühitdə) */}
-          {process.env.NODE_ENV !== "production" && (
-            <div className="mt-8 flex items-start gap-2.5 rounded-md border border-neutral-200 bg-white px-3.5 py-3 text-xs text-neutral-500">
-              <BookOpen className="mt-0.5 size-4 shrink-0 text-neutral-400" />
-              <p className="leading-relaxed">
-                Bu demo məlumatlar brauzerin yaddaşında saxlanılır və yalnız bu
-                cihazda görünür. İmtahan bitəndə nəticəniz ekranda göstərilir.
-              </p>
-            </div>
-          )}
-        </div>
+        <aside className="portal-notes" aria-label="İmtahan haqqında">
+          <div className="portal-note"><p className="eyebrow">Öyrən. Yoxla. İrəlilə.</p><h2 className="mt-3 text-lg font-semibold">Kitabça sistemi</h2><p className="mt-2 text-sm text-neutral-500">Biliklərini yoxlamaq və nəticəni görmək üçün aydın bir başlanğıc.</p><div className="mt-5 rounded-md bg-brand-50 px-3 py-2 text-xs font-medium text-brand-700">Sadə giriş · Rahat istifadə · Aydın nəticə</div></div>
+          <div className="portal-note"><div className="flex items-center gap-3"><span className="note-icon"><Clock3 className="size-5" /></span><h3 className="text-sm font-semibold">Vaxtını düzgün böl</h3></div><p className="mt-3 text-xs leading-relaxed text-neutral-500">İmtahan vaxtı bitdikdə cavablar avtomatik yekunlaşdırılır.</p></div>
+          <div className="portal-note"><div className="flex items-center gap-3"><span className="note-icon sage"><CheckCircle2 className="size-5" /></span><h3 className="text-sm font-semibold">Nəticəni dərhal gör</h3></div><p className="mt-3 text-xs leading-relaxed text-neutral-500">İmtahanı bitirdikdən sonra nəticə səhifəsinə keçəcəksən.</p></div>
+          <a href="mailto:destek@hilalkurslari.az" className="portal-support"><BookOpen className="size-5 shrink-0" /><span><strong className="block text-sm">Köməyə ehtiyacın var?</strong><span className="text-xs">Dəstək komandası ilə əlaqə saxla.</span></span><ArrowRight className="ml-auto size-4 shrink-0" /></a>
+        </aside>
       </main>
+      <footer className="portal-footer"><div><strong className="text-xs font-semibold text-brand-700">HİLAL KURSLARI</strong><p className="mt-1 text-xs text-neutral-500">Bilik, inkişaf və gələcəyə inam.</p></div><a href="mailto:destek@hilalkurslari.az" className="text-xs text-neutral-500 hover:text-brand-700">Dəstək ilə əlaqə</a></footer>
     </div>
   );
 }

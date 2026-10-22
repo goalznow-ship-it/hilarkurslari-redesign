@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 import { currentAcademicYear } from "@/lib/helpers";
-import { deleteClass, getClasses, getSession, saveClass } from "@/lib/store";
+import { deleteClass, getClasses, getSession, saveClass, getAcademicYears } from "@/lib/store";
 import type { SchoolClass } from "@/lib/types";
 
 import {
@@ -70,6 +70,7 @@ function blankForm(): FormState {
 
 export default function ClassesPage() {
   const router = useRouter();
+  const [academicYears, setAcademicYears] = useState<import("@/lib/types").AcademicYear[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -81,7 +82,7 @@ export default function ClassesPage() {
       router.replace("/admin/login");
       return;
     }
-    const t = setTimeout(() => setClasses(getClasses()), 0);
+    const t = setTimeout(() => { try { setClasses(getClasses()); setAcademicYears(getAcademicYears()); } catch { window.alert("Sinif və il reyestri oxunmadı. Səhifəni yeniləyin."); } }, 0);
     return () => clearTimeout(t);
   }, [router]);
 
@@ -144,13 +145,15 @@ export default function ClassesPage() {
       section: form.section.trim(),
       teacher: form.teacher.trim(),
       studentCount: Math.max(0, parseInt(form.studentCount, 10) || 0),
-      academicYear: form.academicYear.trim() || currentAcademicYear(),
+      academicYear: form.academicYear || currentAcademicYear(),
       createdAt: editing?.createdAt ?? new Date().toISOString(),
     };
 
-    saveClass(schoolClass);
-    reload();
-    setDialogOpen(false);
+    try {
+      saveClass(schoolClass);
+      reload();
+      setDialogOpen(false);
+    } catch { window.alert("Sinif saxlanılmadı. Yenidən cəhd edin."); }
   };
 
   const handleDelete = (c: SchoolClass) => {
@@ -159,8 +162,8 @@ export default function ClassesPage() {
         `"${c.name}" sinifi silinəcək. Davam edilsin?`,
       )
     ) {
-      deleteClass(c.id);
-      reload();
+      try { deleteClass(c.id); reload(); }
+      catch { window.alert("Sinif silinmədi. Yenidən cəhd edin."); }
     }
   };
 
@@ -471,14 +474,7 @@ export default function ClassesPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="c-year">Tədris ili</Label>
-                <Input
-                  id="c-year"
-                  value={form.academicYear}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, academicYear: e.target.value }))
-                  }
-                  placeholder="Məs: 2026-2027"
-                />
+                <select id="c-year" value={form.academicYear} onChange={(event) => setForm((value) => ({ ...value, academicYear: event.target.value }))} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"><option value="">Tədris ili seçin</option>{academicYears.filter((year) => year.active || year.label === editing?.academicYear).map((year) => <option key={year.id} value={year.label}>{year.label}{year.active ? "" : " (arxiv)"}</option>)}</select>
               </div>
             </div>
           </div>

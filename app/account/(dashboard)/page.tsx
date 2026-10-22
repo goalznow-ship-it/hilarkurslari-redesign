@@ -63,7 +63,7 @@ const RANGES = [
 
 const SERIES = {
   attempts: { key: "attempts", label: "Cəhd", color: "var(--color-brand-600)" },
-  tickets: { key: "tickets", label: "Bilet", color: "var(--color-gold-500)" },
+  tickets: { key: "tickets", label: "Bilet", color: "var(--color-gold-400)" },
   questions: { key: "questions", label: "Sual", color: "var(--color-success)" },
 } as const;
 
@@ -393,20 +393,20 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       {/* ===== Səhifə başlığı ===== */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="page-heading flex flex-wrap items-end justify-between gap-5">
         <div>
           <h1 className="text-xl font-semibold text-neutral-900">
-            İdarəetmə Paneli
+            İdarəetmə paneli
           </h1>
           <p className="mt-1 text-sm text-neutral-500">
             Canlı imtahanlar, iştirakçılar və seçilmiş dövrün dinamikası.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
           {/* Tarix aralığı */}
           <div
-            className="flex items-center gap-0.5 rounded-md border border-neutral-200 bg-white p-0.5"
+            className="flex items-center gap-1 rounded-md border border-neutral-200 bg-white p-1"
             role="group"
             aria-label="Tarix aralığı"
           >
@@ -417,8 +417,8 @@ export default function AdminDashboardPage() {
                 aria-pressed={rangeDays === r.days}
                 className={
                   rangeDays === r.days
-                    ? "rounded-[6px] bg-brand-700 px-3 py-1.5 text-xs font-medium text-white transition-colors"
-                    : "rounded-[6px] px-3 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100"
+                    ? "rounded-md bg-brand-700 px-3 py-2 text-xs font-medium text-white"
+                    : "rounded-md px-3 py-2 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100"
                 }
               >
                 {r.label}
@@ -426,133 +426,19 @@ export default function AdminDashboardPage() {
             ))}
           </div>
 
-          <Button asChild className="gap-1.5">
+          <Button asChild className="gap-2">
             <Link href="/account/exams/new">
-              <Plus />
+              <Plus className="size-4" />
               Yeni imtahan
             </Link>
           </Button>
         </div>
       </div>
 
-      {/* ===== Canlı imtahanlar ===== */}
-      <section
-        aria-label="Canlı imtahanlar"
-        className="overflow-hidden rounded-lg border border-brand-800 bg-brand-800 text-white shadow-sm"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-8 items-center justify-center rounded-md bg-white/10">
-              <Radio className="size-4 text-gold-300" />
-            </span>
-            <div>
-              <h2 className="text-sm font-semibold text-white">
-                Canlı imtahanlar
-              </h2>
-              <p className="text-xs text-brand-100/70">
-                {liveExams.length > 0
-                  ? `${liveExams.length} imtahan hal-hazırda açıqdır`
-                  : "Hal-hazırda açıq imtahan yoxdur"}
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/account/online-exams"
-            className="inline-flex items-center gap-1 text-xs font-medium text-gold-300 underline-offset-4 transition-colors hover:text-gold-200 hover:underline"
-          >
-            Onlayn idarəetmə
-            <ArrowRight className="size-3.5" />
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="space-y-3 px-5 pb-5">
-            <Skeleton className="h-16 bg-white/10" />
-          </div>
-        ) : liveExams.length === 0 ? (
-          <div className="flex items-center gap-3 border-t border-white/10 px-5 py-6">
-            <CheckCircle2 className="size-5 shrink-0 text-emerald-300/80" />
-            <p className="text-sm text-brand-100/80">
-              Hazırda canlı imtahan yoxdur — yeni imtahan yaradın və vaxt
-              aralığını təyin edin.
-            </p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-white/10 border-t border-white/10">
-            {liveExams.map((live) => (
-              <li
-                key={live.exam.id}
-                className="flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-4"
-              >
-                <div className="min-w-[220px] flex-1">
-                  <Link
-                    href={`/account/exams/${live.exam.id}`}
-                    className="text-sm font-medium text-white underline-offset-4 hover:underline"
-                  >
-                    {live.exam.title}
-                  </Link>
-                  <p className="mt-0.5 font-mono text-xs text-brand-100/60">
-                    {live.exam.code ?? "—"}
-                  </p>
-                </div>
-
-                {/* İştirakçı / qeydiyyat */}
-                <div className="min-w-[150px]">
-                  <p className="tnum text-sm text-white">
-                    {live.participants}{" "}
-                    <span className="text-brand-100/60">
-                      / {live.registered} qeydiyyatlı
-                    </span>
-                  </p>
-                  <p className="tnum text-xs text-brand-100/60">
-                    {live.soldTickets} bilet · {formatManat(live.revenue)}
-                  </p>
-                </div>
-
-                {/* Qalan vaxt */}
-                <div className="min-w-[170px]">
-                  <div className="flex items-center justify-between text-xs text-brand-100/70">
-                    <span>Qalan vaxt</span>
-                    <span className="tnum text-white">
-                      {formatDurationShort(live.remaining)}
-                    </span>
-                  </div>
-                  <div
-                    className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/15"
-                    role="progressbar"
-                    aria-valuenow={live.progress}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`${live.exam.title} — keçən vaxt`}
-                  >
-                    <div
-                      className="h-full rounded-full bg-gold-400 transition-[width] duration-300"
-                      style={{ width: `${live.progress}%` }}
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  asChild
-                  variant="gold"
-                  size="sm"
-                  className="ml-auto gap-1.5"
-                >
-                  <Link href="/account/online-exams">
-                    <Eye />
-                    İzlə
-                  </Link>
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
       {/* ===== KPI-lər ===== */}
       <section
         aria-label="Əsas göstəricilər"
-        className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+        className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
       >
         {loading
           ? [0, 1, 2, 3].map((i) => (
@@ -596,12 +482,126 @@ export default function AdminDashboardPage() {
             )}
       </section>
 
+      {/* ===== Canlı imtahanlar ===== */}
+      <section
+        aria-label="Canlı imtahanlar"
+        className="overflow-hidden rounded-lg border border-neutral-200 bg-white text-neutral-900 shadow-xs"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-8 items-center justify-center rounded-md bg-brand-50">
+              <Radio className="size-4 text-brand-700" />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-neutral-900">
+                Canlı imtahanlar
+              </h2>
+              <p className="text-xs text-neutral-500">
+                {liveExams.length > 0
+                  ? `${liveExams.length} imtahan hal-hazırda açıqdır`
+                  : "Hal-hazırda açıq imtahan yoxdur"}
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/account/online-exams"
+            className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 underline-offset-4 transition-colors hover:text-brand-800 hover:underline"
+          >
+            Onlayn idarəetmə
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="space-y-3 px-5 pb-5">
+            <Skeleton className="h-16 bg-brand-50" />
+          </div>
+        ) : liveExams.length === 0 ? (
+          <div className="flex items-center gap-3 border-t border-neutral-100 px-5 py-6">
+            <CheckCircle2 className="size-5 shrink-0 text-success" />
+            <p className="text-sm text-neutral-600">
+              Hazırda canlı imtahan yoxdur — yeni imtahan yaradın və vaxt
+              aralığını təyin edin.
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-neutral-100 border-t border-neutral-100">
+            {liveExams.map((live) => (
+              <li
+                key={live.exam.id}
+                className="flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-4"
+              >
+                <div className="min-w-0 basis-full sm:basis-auto flex-1">
+                  <Link
+                    href={`/account/exams/${live.exam.id}`}
+                    className="text-sm font-medium text-neutral-900 underline-offset-4 hover:underline"
+                  >
+                    {live.exam.title}
+                  </Link>
+                  <p className="mt-0.5 font-mono text-xs text-neutral-500">
+                    {live.exam.code ?? "—"}
+                  </p>
+                </div>
+
+                {/* İştirakçı / qeydiyyat */}
+                <div className="min-w-[150px]">
+                  <p className="tnum text-sm text-neutral-900">
+                    {live.participants}{" "}
+                    <span className="text-neutral-500">
+                      / {live.registered} qeydiyyatlı
+                    </span>
+                  </p>
+                  <p className="tnum text-xs text-neutral-500">
+                    {live.soldTickets} bilet · {formatManat(live.revenue)}
+                  </p>
+                </div>
+
+                {/* Qalan vaxt */}
+                <div className="min-w-[170px]">
+                  <div className="flex items-center justify-between text-xs text-neutral-500">
+                    <span>Qalan vaxt</span>
+                    <span className="tnum text-neutral-900">
+                      {formatDurationShort(live.remaining)}
+                    </span>
+                  </div>
+                  <div
+                    className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-brand-100"
+                    role="progressbar"
+                    aria-valuenow={live.progress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`${live.exam.title} — keçən vaxt`}
+                  >
+                    <div
+                      className="h-full rounded-full bg-brand-500 "
+                      style={{ width: `${live.progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto gap-1.5"
+                >
+                  <Link href="/account/online-exams">
+                    <Eye />
+                    İzlə
+                  </Link>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {/* ===== Qrafik + Diqqət ===== */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         {/* Qrafik */}
         <Card className="gap-0 py-0">
-          <CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-neutral-100 py-4">
-            <CardTitle className="text-sm">Aktivlik</CardTitle>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4 border-b border-neutral-100 py-5">
+            <CardTitle className="text-base">Aktivlik</CardTitle>
             <div className="flex items-center gap-3">
               {Object.values(SERIES).map((s) => (
                 <span
@@ -627,7 +627,7 @@ export default function AdminDashboardPage() {
                 <p className="text-center text-sm text-neutral-500">
                   Hələ məlumat yoxdur
                 </p>
-                <p className="text-center text-xs text-neutral-400">
+                <p className="text-center text-xs text-neutral-500">
                   Seçilmiş {rangeDays} gün ərzində cəhd, bilet və ya yeni sual
                   qeydə alınmayıb.
                 </p>
@@ -695,7 +695,7 @@ export default function AdminDashboardPage() {
         {/* Diqqət tələb edir */}
         <Card className="gap-0 py-0">
           <CardHeader className="border-b border-neutral-100 py-4">
-            <CardTitle className="text-sm">Diqqət tələb edir</CardTitle>
+            <CardTitle className="text-base">Diqqət tələb edir</CardTitle>
           </CardHeader>
           <CardContent className="py-4">
             {loading ? (
@@ -745,9 +745,9 @@ export default function AdminDashboardPage() {
 
       {/* ===== Son imtahanlar ===== */}
       <Card className="gap-0 py-0">
-        <CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-neutral-100 py-4">
-          <CardTitle className="text-sm">Son imtahanlar</CardTitle>
-          <div className="flex items-center gap-2">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4 border-b border-neutral-100 py-5">
+          <CardTitle className="text-base">Son imtahanlar</CardTitle>
+          <div className="flex flex-wrap items-center gap-2">
             <label
               htmlFor="sort"
               className="text-xs text-neutral-500"
@@ -798,7 +798,16 @@ export default function AdminDashboardPage() {
             />
           ) : (
             <>
-              <div className="overflow-x-auto">
+              <ul className="divide-y divide-neutral-100 lg:hidden">
+                {pageRows.map((row) => (
+                  <li key={row.exam.id} className="p-5">
+                    <div className="flex items-start justify-between gap-3"><Link href={`/account/exams/${row.exam.id}`} className="min-w-0 break-words font-semibold text-neutral-900 hover:text-brand-700">{row.exam.title}</Link><StatusBadge status={row.status} /></div>
+                    <p className="mt-1 font-mono text-xs text-neutral-500">{row.exam.code ?? "—"}</p>
+                    <dl className="mt-4 grid grid-cols-2 gap-3 text-xs"><div><dt className="text-neutral-500">İştirakçı</dt><dd className="tnum mt-1 font-semibold">{row.participants}</dd></div><div><dt className="text-neutral-500">Orta bal</dt><dd className="tnum mt-1 font-semibold">{row.avgScore === null ? "—" : `${row.avgScore}%`}</dd></div><div className="col-span-2"><dt className="text-neutral-500">Yaradılma tarixi</dt><dd className="mt-1">{formatDateTime(row.exam.createdAt)}</dd></div></dl>
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden overflow-x-auto lg:block">
                 <table className="w-full min-w-[760px] text-sm">
                   <thead>
                     <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">
@@ -819,7 +828,7 @@ export default function AdminDashboardPage() {
                           >
                             {row.exam.title}
                           </Link>
-                          <p className="mt-0.5 font-mono text-xs text-neutral-400">
+                          <p className="mt-0.5 font-mono text-xs text-neutral-500">
                             {row.exam.code ?? "—"}
                           </p>
                         </td>

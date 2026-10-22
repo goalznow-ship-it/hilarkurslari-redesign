@@ -35,17 +35,26 @@ import {
   Textarea,
 } from "@/components/ui";
 import {
-  addQuestionToBank,
+  addQuestionValidated,
   getQuestionBank,
+  getCompanies,
+  getAcademicYears,
   newId,
   saveExam,
+  validateQuestion,
+  normalizeQuestionType,
 } from "@/lib/store";
-import { currentAcademicYear, formatDateTimeLocal, PHASE_LABELS, PHASE_ORDER } from "@/lib/helpers";
-import type { Exam, ExamPhase, Question } from "@/lib/types";
+import { currentAcademicYear, formatDateTimeLocal, normalizeTicket, PHASE_LABELS, PHASE_ORDER } from "@/lib/helpers";
+import type { Exam, ExamPhase, Question, QuestionType, Company, AcademicYear } from "@/lib/types";
+
+import { QuestionImage, QuestionMediaEditor } from "@/components/QuestionMedia";
+import QuestionBankFilters from "@/components/QuestionBankFilters";
+import { cloneQuestion, matchesQuestion, type QuestionFilters } from "@/lib/questions";
 
 export type ExamFormMode = "create" | "edit";
 
 type EditorState = {
+  companyId: string;
   title: string;
   subject: string;
   startsAt: string;
@@ -64,7 +73,20 @@ type EditorState = {
 
 let questionSeq = 0;
 function blankQuestion(): Question {
-  return { id: `q-${++questionSeq}`, text: "", options: ["", "", "", ""], correct: 0 };
+  return {
+    id: `q-${++questionSeq}`,
+    text: "",
+    options: ["", "", "", ""],
+    correct: 0,
+    type: "single",
+    subject: "",
+    topic: "",
+    tags: [],
+    grade: "",
+    difficulty: "Orta",
+    explanation: "",
+    points: 1,
+  };
 }
 
 export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Exam }) {
@@ -81,6 +103,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
     status: exam?.status ?? "preparing",
     grade: exam?.grade ?? "",
     block: exam?.block ?? "",
+    companyId: exam?.companyId ?? "",
     academicYear: exam?.academicYear ?? currentAcademicYear(),
     variants: String(exam?.variants ?? 1),
     pdfReady: exam?.pdfReady ?? false,
@@ -89,13 +112,17 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
 
   const [questions, setQuestions] = useState<Question[]>(
     exam?.questions.length
-      ? exam.questions.map((q) => ({ ...q, options: [...q.options] }))
+      ? exam.questions.map((q) => cloneQuestion(q))
       : [blankQuestion()],
   );
 
   const [errors, setErrors] = useState<string[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [years, setYears] = useState<AcademicYear[]>([]);
+  useEffect(() => { const timer = setTimeout(() => { try { setCompanies(getCompanies()); setYears(getAcademicYears()); } catch { setErrors(["Reyestrlər oxunmadı. Səhifəni yeniləyin."]); } }, 0); return () => clearTimeout(timer); }, []);
   const [bankOpen, setBankOpen] = useState(false);
   const [selectedBankIds, setSelectedBankIds] = useState<string[]>([]);
+  const [bankFilters, setBankFilters] = useState<QuestionFilters>({});
   const [bankQuestions, setBankQuestions] = useState<Question[]>([]);
 
   // Yaratma rejimində tarix sahələrini default dəyərlərlə doldur
@@ -144,7 +171,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
       }),
     );
 
-  const updateCorrect = (qid: string, correct: number) =>
+  const updateCorrect = (qid: string, correct: number | number[]) =>
     setQuestions((qs) =>
       qs.map((q) => (q.id === qid ? { ...q, correct } : q)),
     );
@@ -155,23 +182,19 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
     );
 
   const addBankQuestion = (q: Question) => {
-    addQuestionToBank(q);
-    setBankQuestions(getQuestionBank());
+    try {
+      const result = addQuestionValidated(q);
+      if (!result.success) { setErrors([result.error ?? "Sual banka əlavə edilmədi."]); return; }
+      setBankQuestions(getQuestionBank());
+    } catch { setErrors(["Sual banka yazılmadı. Yenidən cəhd edin."]); }
   };
 
   const handleAddSelected = () => {
-    const selected = bankQuestions.filter((q) =>
-      selectedBankIds.includes(q.id),
-    );
+    const selected = selectedBankIds.map((id) => bankQuestions.find((q) => q.id === id)).filter((q): q is Question => !!q);
     if (selected.length === 0) return;
     setQuestions((qs) => [
       ...qs,
-      ...selected.map((q) => ({
-        id: newId(),
-        text: q.text,
-        options: [...q.options],
-        correct: q.correct,
-      })),
+      ...selected.map((q) => cloneQuestion(q, newId())),
     ]);
     setSelectedBankIds([]);
     setBankOpen(false);
@@ -197,48 +220,83 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
       errs.push("Müddət 1–1000 dəqiqə aralığında olmalıdır.");
 
     questions.forEach((q, i) => {
-      if (!q.text.trim()) errs.push(`${i + 1}. sualın mətni boşdur.`);
-      q.options.forEach((o, oi) => {
-        if (!o.trim())
-          errs.push(`${i + 1}. sualın ${String.fromCharCode(65 + oi)} variantı boşdur.`);
-      });
-      if (!(q.correct >= 0 && q.correct < q.options.length))
-        errs.push(`${i + 1}. sualda düzgün variant seçin.`);
+      const validation = validateQuestion(q);
+      errs.push(...validation.errors.map((error) => `${i + 1}. sual: ${error}`));
     });
 
     setErrors(errs);
     if (errs.length > 0) return;
 
-    const tickets = state.ticketCodes
+    // Parse and validate ticket codes
+    const rawCodes = state.ticketCodes
       .split(/[,\s]+/)
-      .map((t) => t.trim().toUpperCase())
+      .map((t) => t.trim())
       .filter(Boolean);
+
+    // If ticket field is empty, allow it (preserve existing behavior)
+    const tickets = [];
+    if (rawCodes.length > 0) {
+      const ticketRegex = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+      const malformed = rawCodes.filter((code) => !ticketRegex.test(code.toUpperCase()));
+      if (malformed.length > 0) {
+        setErrors(["Yanlış bilet kodu formatı. Düzgün format: XXXX-XXXX."]);
+        return;
+      }
+
+      // Normalize for comparison
+      const normalizedSubmitted = rawCodes.map((code) => normalizeTicket(code));
+
+      // Check for duplicates after normalization (case-insensitive)
+      const seen = new Set<string>();
+      for (const code of normalizedSubmitted) {
+        if (seen.has(code.toUpperCase())) {
+          setErrors(["Təkrarlanan bilet kodları aşkarlandı."]);
+          return;
+        }
+        seen.add(code.toUpperCase());
+      }
+
+      // All valid - use normalized codes
+      tickets.push(...normalizedSubmitted);
+    }
 
     const id = mode === "edit" && exam ? exam.id : newId();
     const isEdit = mode === "edit";
 
-    saveExam(
-      {
-        id,
-        title: state.title.trim(),
-        subject: state.subject.trim(),
-        startsAt: new Date(state.startsAt).toISOString(),
-        endsAt: new Date(state.endsAt).toISOString(),
-        durationMin: duration,
-        ticketCodes: tickets,
-        questions,
-        createdAt: exam?.createdAt ?? new Date().toISOString(),
-        status: state.status,
-        code: state.code.trim() || undefined,
-        grade: state.grade.trim(),
-        block: state.block.trim(),
-        academicYear: state.academicYear.trim(),
-        variants: Math.max(1, parseInt(state.variants, 10) || 1),
-        pdfReady: state.pdfReady,
-        onlineEnabled: state.onlineEnabled,
-      },
-      isEdit,
-    );
+    let result;
+    try {
+      result = saveExam(
+        {
+          id,
+          title: state.title.trim(),
+          subject: state.subject.trim(),
+          startsAt: new Date(state.startsAt).toISOString(),
+          endsAt: new Date(state.endsAt).toISOString(),
+          durationMin: duration,
+          ticketCodes: tickets,
+          questions,
+          createdAt: exam?.createdAt ?? new Date().toISOString(),
+          status: state.status,
+          code: state.code.trim() || undefined,
+          grade: state.grade.trim(),
+          block: state.block.trim(),
+          companyId: state.companyId || undefined,
+          academicYear: state.academicYear,
+          variants: Math.max(1, parseInt(state.variants, 10) || 1),
+          pdfReady: state.pdfReady,
+          onlineEnabled: state.onlineEnabled,
+        },
+        isEdit,
+      );
+    } catch {
+      setErrors(["Məlumat bazası yazılarkən xəta baş verdi. Yenidən cəhd edin."]);
+      return;
+    }
+
+    if (!result.success) {
+      setErrors([result.error ?? "İmtahan saxlanılarkən xəta baş verdi."]);
+      return;
+    }
 
     router.push("/account/exams");
   };
@@ -246,7 +304,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
       {errors.length > 0 && (
-        <div className="rounded-md border border-danger/25 bg-danger-soft px-4 py-3 text-sm text-danger-fg">
+        <div role="alert" className="rounded-md border border-danger/25 bg-danger-soft px-4 py-3 text-sm text-danger-fg">
           <ul className="list-disc list-inside space-y-1">
             {errors.map((err, i) => (
               <li key={i}>{err}</li>
@@ -397,13 +455,12 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="grid gap-2">
+              <Label htmlFor="exam-company">Şirkət</Label><select id="exam-company" value={state.companyId} onChange={(event) => setField("companyId", event.target.value)} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"><option value="">Təyin edilməyib</option>{companies.filter((company) => company.active || company.id === exam?.companyId).map((company) => <option key={company.id} value={company.id}>{company.name}{company.active ? "" : " (arxiv)"}</option>)}</select>
               <Label htmlFor="academicYear">Tədris ili</Label>
-              <Input
-                id="academicYear"
-                value={state.academicYear}
-                onChange={(e) => setField("academicYear", e.target.value)}
-                placeholder="Məs: 2026-2027"
-              />
+              <select id="academicYear" value={state.academicYear} onChange={(event) => setField("academicYear", event.target.value)} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm">
+                <option value="">Tədris ili seçin</option>
+                {years.filter((year) => year.active || year.label === exam?.academicYear).map((year) => <option key={year.id} value={year.label}>{year.label}{year.active ? "" : " (arxiv)"}</option>)}
+              </select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="variants">Variant sayı</Label>
@@ -488,6 +545,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
                   </DialogDescription>
                 </DialogHeader>
 
+                <QuestionBankFilters questions={bankQuestions} value={bankFilters} onChange={setBankFilters} />
                 {bankQuestions.length === 0 ? (
                   <p className="py-6 text-center text-sm text-neutral-500">
                     Sual bankı boşdur. Sual kartındakı bookmark ikonu ilə sualları
@@ -495,7 +553,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
                   </p>
                 ) : (
                   <div className="max-h-[50vh] space-y-3 overflow-y-auto pr-1">
-                    {bankQuestions.map((q) => {
+                    {bankQuestions.filter((q) => matchesQuestion(q, bankFilters)).map((q) => {
                       const checked = selectedBankIds.includes(q.id);
                       return (
                         <label
@@ -515,6 +573,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
                             <p className="text-sm font-medium text-neutral-900">
                               {q.text || "— mətnsiz sual —"}
                             </p>
+                            <QuestionImage image={q.image} />
                             <p className="mt-1 text-xs text-neutral-500">
                               {q.options.map((o, i) => (
                                 <span key={i} className="mr-2">
@@ -560,7 +619,9 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
               <CardTitle className="text-sm font-semibold text-brand-700">
                 Sual {qi + 1}
               </CardTitle>
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1">
+                <Button type="button" size="sm" variant="ghost" aria-label={`Sual ${qi + 1} yuxarı`} disabled={qi === 0} onClick={() => setQuestions((list) => { const next = [...list]; [next[qi - 1], next[qi]] = [next[qi], next[qi - 1]]; return next; })}>↑</Button>
+                <Button type="button" size="sm" variant="ghost" aria-label={`Sual ${qi + 1} aşağı`} disabled={qi === questions.length - 1} onClick={() => setQuestions((list) => { const next = [...list]; [next[qi], next[qi + 1]] = [next[qi + 1], next[qi]]; return next; })}>↓</Button>
                 <Button
                   type="button"
                   variant="ghost"
@@ -585,6 +646,8 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2"><div className="grid gap-2"><Label htmlFor={`q-type-${q.id}`}>Sualın növü</Label><Select value={q.type ?? "single"} onValueChange={(type) => setQuestions((list) => list.map((item) => item.id === q.id ? normalizeQuestionType(item, type as QuestionType) : item))}><SelectTrigger id={`q-type-${q.id}`}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="single">Tək düzgün cavab</SelectItem><SelectItem value="true_false">Doğru / Yanlış</SelectItem><SelectItem value="multiple">Bir neçə düzgün cavab</SelectItem></SelectContent></Select></div>
+              <div className="grid gap-2"><Label htmlFor={`q-points-${q.id}`}>Bal dəyəri</Label><Input id={`q-points-${q.id}`} type="number" min="0.01" step="any" value={Number.isFinite(q.points ?? 1) ? q.points ?? 1 : ""} onChange={(e) => setQuestions((list) => list.map((item) => item.id === q.id ? { ...item, points: e.target.value === "" ? NaN : Number(e.target.value) } : item))} /></div></div>
               <div className="grid gap-2">
                 <Label htmlFor={`q-text-${q.id}`}>Sualın mətni</Label>
                 <Textarea
@@ -596,36 +659,71 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
                 />
               </div>
 
+              <QuestionMediaEditor question={q} onChange={(updated) => setQuestions((list) => list.map((item) => item.id === q.id ? updated : item))} />
               <div className="space-y-2">
                 <p className="text-xs font-medium text-neutral-500">
-                  Cavab variantları (düzgününü seçin):
+                  Cavab variantları {q.type === "multiple" ? "(bir neçə düzgün cavab seçin)" : "(düzgününü seçin)"}:
                 </p>
-                <RadioGroup
-                  value={String(q.correct)}
-                  onValueChange={(v) => updateCorrect(q.id, parseInt(v, 10))}
-                  className="gap-2"
-                >
-                  {q.options.map((opt, oi) => (
-                    <div
-                      key={oi}
-                      className="flex items-center gap-3 rounded-md border border-neutral-200 bg-neutral-50/50 px-3 py-2"
-                    >
-                      <RadioGroupItem
-                        value={String(oi)}
-                        id={`q-${q.id}-opt-${oi}`}
-                      />
-                      <span className="w-5 text-xs font-semibold text-neutral-500">
-                        {String.fromCharCode(65 + oi)}
-                      </span>
-                      <Input
-                        value={opt}
-                        onChange={(e) => updateOption(q.id, oi, e.target.value)}
-                        placeholder={`Variant ${String.fromCharCode(65 + oi)}`}
-                        className="flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                      />
-                    </div>
-                  ))}
-                </RadioGroup>
+                {q.type === "multiple" ? (
+                  <div className="gap-2">
+                    {q.options.map((opt, oi) => (
+                      <label
+                        key={oi}
+                        className="flex items-center gap-3 rounded-md border border-neutral-200 bg-neutral-50/50 px-3 py-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={Array.isArray(q.correct) && q.correct.includes(oi)}
+                          onChange={(e) => {
+                            const current = Array.isArray(q.correct) ? [...q.correct] : [];
+                            const updated = e.target.checked
+                              ? [...current, oi]
+                              : current.filter((idx) => idx !== oi);
+                            updateCorrect(q.id, updated);
+                          }}
+                        />
+                        <span className="w-5 text-xs font-semibold text-neutral-500">
+                          {String.fromCharCode(65 + oi)}
+                        </span>
+                        <Input
+                          value={opt}
+                          readOnly={q.type === "true_false"}
+                          onChange={(e) => updateOption(q.id, oi, e.target.value)}
+                          placeholder={`Variant ${String.fromCharCode(65 + oi)}`}
+                          className="flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <RadioGroup
+                    value={String(q.correct)}
+                    onValueChange={(v) => updateCorrect(q.id, parseInt(v, 10))}
+                    className="gap-2"
+                  >
+                    {q.options.map((opt, oi) => (
+                      <div
+                        key={oi}
+                        className="flex items-center gap-3 rounded-md border border-neutral-200 bg-neutral-50/50 px-3 py-2"
+                      >
+                        <RadioGroupItem
+                          value={String(oi)}
+                          id={`q-${q.id}-opt-${oi}`}
+                        />
+                        <span className="w-5 text-xs font-semibold text-neutral-500">
+                          {String.fromCharCode(65 + oi)}
+                        </span>
+                        <Input
+                          value={opt}
+                          readOnly={q.type === "true_false"}
+                          onChange={(e) => updateOption(q.id, oi, e.target.value)}
+                          placeholder={`Variant ${String.fromCharCode(65 + oi)}`}
+                          className="flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        />
+                      </div>
+                    ))}
+                  </RadioGroup>
+                )}
               </div>
             </CardContent>
           </Card>
