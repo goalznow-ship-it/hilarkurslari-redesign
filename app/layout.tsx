@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-// Inter — latin-ext altçəkilməsi Azərbaycan hərflərini (ə, ı, ö, ü, ş, ç, ğ, İ) qapsayır
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin", "latin-ext"],
+const geist = localFont({
+  src: [
+    { path: "../public/fonts/geist-latin.woff2", weight: "100 900" },
+    { path: "../public/fonts/geist-latin-ext.woff2", weight: "100 900" },
+  ],
+  variable: "--font-geist",
   display: "swap",
 });
 
@@ -15,9 +17,9 @@ export const metadata: Metadata = {
     "Azərbaycan dilində onlayn imtahan platforması: tələbələr imtahana daxil olur, nəticələr avtomatik yoxlanılır.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="az" className={`${inter.variable} h-full antialiased`}>
+    <html lang="az" className={`${geist.variable} h-full antialiased`}>
       <body className="min-h-full bg-neutral-50 text-neutral-900">
         {children}
       </body>

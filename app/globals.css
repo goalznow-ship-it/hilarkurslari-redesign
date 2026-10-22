@@ -2,7 +2,7 @@
 
 /* ==========================================================================
    Hilal Kursları — dizayn tokenları
-   Brend: bordo (#4A1A2C) + qızılı aksent. Hissiyyat: ciddi, sakit, etibarlı.
+   Brend: bordo (#480F30) + qızılı aksent. Hissiyyat: ciddi, sakit, etibarlı.
    ========================================================================== */
 
 @theme {
@@ -14,9 +14,9 @@
   --color-brand-400: #b17b8f;
   --color-brand-500: #8a4a63;
   --color-brand-600: #6e3450;
-  --color-brand-700: #4a1a2c; /* brend əsası */
-  --color-brand-800: #3a1524;
-  --color-brand-900: #26101a;
+  --color-brand-700: #480f30; /* brend əsası */
+  --color-brand-800: #380b25;
+  --color-brand-900: #280b1c;
 
   /* --- Qızılı aksent (səhifə vurğusu, ikincil CTA) ---------------------- */
   --color-gold-50: #fdf8ec;
@@ -29,7 +29,7 @@
   --color-gold-700: #6f4d13;
 
   /* --- Neytral şkala (isti boz) ----------------------------------------- */
-  --color-neutral-50: #faf9f8;
+  --color-neutral-50: #faf8f6;
   --color-neutral-100: #f4f2f1;
   --color-neutral-200: #e8e5e3;
   --color-neutral-300: #d6d1ce;
@@ -38,24 +38,24 @@
   --color-neutral-600: #57504a;
   --color-neutral-700: #403a35;
   --color-neutral-800: #2a2622;
-  --color-neutral-900: #1b1817;
+  --color-neutral-900: #30252b;
 
   /* --- Semantik rənglər -------------------------------------------------- */
-  --color-success: #0f7355;
-  --color-success-soft: #e7f4ee;
-  --color-success-fg: #0b5a42; /* soft üzərində 7:1+ */
+  --color-success: #3c6b53;
+  --color-success-soft: #edf4ef;
+  --color-success-fg: #325e49; /* soft üzərində 7:1+ */
   --color-warning: #a96b0e;
   --color-warning-soft: #fcf3e2;
   --color-warning-fg: #8a5608;
   --color-danger: #b3261e;
   --color-danger-soft: #fbeae8;
   --color-danger-fg: #97201a;
-  --color-info: #1f5fa8;
-  --color-info-soft: #eaf1fa;
-  --color-info-fg: #1a5493;
+  --color-info: #86566c;
+  --color-info-soft: #f5edf1;
+  --color-info-fg: #6b3650;
 
   /* --- Tipoqrafiya: yalnız 5 ölçü ---------------------------------------- */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono-stack), ui-monospace, "SF Mono", monospace;
 
   --text-xs: 0.75rem; /* 12 */
@@ -71,9 +71,9 @@
   /* Böyük ölçülər yoxdur — 2xl/3xl 28px-ə eynilənir */
   --text-2xl: 1.75rem;
   --text-2xl--line-height: 1.25;
-  --text-3xl: 1.75rem;
+  --text-3xl: 2rem;
   --text-3xl--line-height: 1.25;
-  --text-4xl: 1.75rem;
+  --text-4xl: 2.5rem;
   --text-4xl--line-height: 1.25;
   --text-5xl: 1.75rem;
   --text-5xl--line-height: 1.25;
@@ -271,3 +271,70 @@ input[type="datetime-local"] {
   background-repeat: repeat-x;
   background-size: 100% 1px;
 }
+
+/* Unified Hilal surfaces: public portal and management workspace. */
+.student-portal {
+  background:
+    radial-gradient(ellipse at 12% 30%, #f0e3e9 0, transparent 48%),
+    radial-gradient(ellipse at 96% 84%, #e5eff0 0, transparent 45%),
+    #faf8fa;
+  padding: 24px clamp(16px, 4vw, 64px) 0;
+}
+.brand-lockup { display: flex; align-items: center; gap: 12px; color: var(--color-brand-700); }
+.brand-lockup img { flex-shrink: 0; object-fit: contain; }
+.brand-lockup strong { display: block; font-size: 15px; font-weight: 700; letter-spacing: -.025em; }
+.brand-lockup small { display: block; margin-top: 2px; font-size: 10px; color: var(--color-neutral-500); letter-spacing: .06em; }
+.portal-header { max-width: 1320px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 22px; background: rgb(255 255 255 / .92); border: 1px solid var(--color-neutral-200); border-radius: 20px; box-shadow: var(--shadow-xs); }
+.portal-grid { max-width: 1240px; margin: 48px auto 56px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(330px, 1.12fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+.eyebrow { font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: .12em; color: var(--color-brand-600); }
+.portal-intro { padding-top: 12px; }
+.portal-intro h1 { margin-top: 20px; font-size: clamp(30px, 3vw, 42px); font-weight: 700; line-height: 1.15; letter-spacing: -.04em; color: var(--color-brand-900); }
+.portal-intro h1 span { color: var(--color-brand-600); }
+.portal-steps { margin-top: 28px; padding: 24px; border: 1px solid rgb(232 229 227 / .8); background: rgb(255 255 255 / .9); border-radius: 16px; box-shadow: var(--shadow-sm); }
+.step-number { display: flex; width: 30px; height: 30px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9px; background: var(--color-brand-100); color: var(--color-brand-700); font-size: 10px; font-weight: 700; }
+.entry-card { min-width: 0; background: white; padding: 28px; border: 1px solid var(--color-neutral-200); border-radius: 22px; box-shadow: 0 18px 50px -18px rgb(72 32 52 / .2); }
+.entry-card input, .entry-card select { background: #fefdfd; height: 46px; border-color: var(--color-neutral-200); }
+.entry-card button[type="submit"] { height: 48px; margin-top: 4px; }
+.portal-notes { display: flex; flex-direction: column; gap: 16px; padding-top: 12px; }
+.portal-note { padding: 24px; border: 1px solid var(--color-neutral-200); border-radius: 16px; background: rgb(255 255 255 / .94); box-shadow: var(--shadow-sm); }
+.note-icon { width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--color-brand-100); color: var(--color-brand-700); }
+.note-icon.sage { background: var(--color-success-soft); color: var(--color-success-fg); }
+.portal-support { display: flex; align-items: center; gap: 12px; padding: 20px; color: var(--color-brand-700); border-radius: 16px; background: rgb(255 255 255 / .75); border: 1px solid var(--color-neutral-200); }
+.portal-support:hover { background: white; }
+.portal-footer { max-width: 1240px; margin: 0 auto; border-top: 1px solid var(--color-neutral-200); padding: 24px 0 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.admin-shell { background: radial-gradient(ellipse at 80% 0, #f5eef2 0, transparent 45%), var(--color-neutral-50); }
+.admin-shell > aside { background: #fffdfc; }
+.admin-shell main > div > .page-heading h1 { letter-spacing: -.035em; }
+.admin-shell main { isolation: isolate; }
+.admin-shell table thead { background: #faf8f8; }
+.admin-shell table th { font-size: 11px; letter-spacing: .025em; color: var(--color-neutral-600); }
+.admin-shell table td { vertical-align: middle; }
+.admin-shell table tbody tr { transition: background-color 150ms; }
+.admin-shell table tbody tr:hover { background: var(--color-brand-50); }
+.admin-shell [data-slot="card-header"] { border-color: var(--color-neutral-100); }
+.admin-shell a.group { border-top: 3px solid var(--color-brand-200); padding: 20px; }
+.exam-card [data-slot="badge"] { max-width: 100%; white-space: normal; }
+@media (max-width: 1100px) {
+  .portal-grid { grid-template-columns: minmax(0, 1fr) minmax(320px, 1.1fr); max-width: 900px; }
+  .portal-notes { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .student-portal { padding: 12px 16px 0; }
+  .portal-header { padding: 10px 12px; border-radius: 14px; gap: 8px; }
+  .brand-lockup { gap: 8px; }
+  .brand-lockup strong { font-size: 13px; }
+  .portal-header .brand-lockup img { width: 36px; height: 36px; }
+  .portal-grid { margin-top: 28px; gap: 24px; grid-template-columns: minmax(0, 1fr); }
+  .portal-intro { display: contents; }
+  .portal-intro > .eyebrow { margin-bottom: -12px; }
+  .portal-intro h1 { margin-top: 0; font-size: 34px; }
+  .portal-intro > p:not(.eyebrow) { margin-top: -12px; }
+  .entry-card { grid-row: 4; padding: 24px 20px; }
+  .portal-steps { margin-top: 0; }
+  .portal-notes { grid-template-columns: minmax(0, 1fr); }
+  .portal-footer { align-items: start; }
+  .admin-shell [data-slot="card-header"] { padding-inline: 20px; }
+  .admin-shell button, .admin-shell [data-slot="button"] { min-height: 44px; }
+}
+
+@media (max-width: 640px) { .admin-shell a.group { padding: 16px; } }

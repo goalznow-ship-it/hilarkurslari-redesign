@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Filter,
+  Download,
   Pencil,
   Plus,
-  Search,
   Trash2,
 } from "lucide-react";
 
@@ -15,6 +14,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -34,12 +34,22 @@ import {
   Textarea,
 } from "@/components/ui";
 import {
+  addQuestionValidated,
   deleteQuestionFromBank,
+  downloadCsvTemplate,
   getQuestionBank,
   getSession,
-  saveQuestionBank,
+  exportQuestionsToCsv,
+  previewQuestionsFromCsv,
+  importQuestionsFromCsv,
+  normalizeQuestionType,
+  updateQuestionValidated,
 } from "@/lib/store";
-import type { Question } from "@/lib/types";
+import type { Question, QuestionType } from "@/lib/types";
+
+import { QuestionImage, QuestionMediaEditor } from "@/components/QuestionMedia";
+import QuestionBankFilters from "@/components/QuestionBankFilters";
+import { matchesQuestion, cloneQuestion, type QuestionFilters } from "@/lib/questions";
 
 const SUBJECTS = [
   "Riyaziyyat",
@@ -70,24 +80,34 @@ function blankQuestion(): Question {
     text: "",
     options: ["", "", "", ""],
     correct: 0,
+    type: "single",
     subject: SUBJECTS[0],
+    topic: "",
+    tags: [],
     grade: GRADES[0],
     difficulty: "Orta",
+    explanation: "",
+    points: 1,
   };
 }
 
 export default function QuestionsPage() {
   const router = useRouter();
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [search, setSearch] = useState("");
-  const [subjectFilter, setSubjectFilter] = useState("all");
-  const [gradeFilter, setGradeFilter] = useState("all");
-  const [difficultyFilter, setDifficultyFilter] = useState("all");
+  const [filters, setFilters] = useState<QuestionFilters>({});
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Question | null>(null);
   const [form, setForm] = useState<Question>(blankQuestion());
+  const [csvDialogOpen, setCsvDialogOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvPreview, setCsvPreview] = useState<{ success: Question[]; errors: { row: number; error: string; data?: Record<string, unknown> }[] } | null>(null);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvText, setCsvText] = useState("");
+  const [csvError, setCsvError] = useState("");
+  const [csvSuccess, setCsvSuccess] = useState("");
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     if (!getSession()) {
@@ -102,63 +122,95 @@ export default function QuestionsPage() {
 
   const reload = () => setQuestions(getQuestionBank());
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return questions.filter((item) => {
-      if (subjectFilter !== "all" && item.subject !== subjectFilter) return false;
-      if (gradeFilter !== "all" && item.grade !== gradeFilter) return false;
-      if (difficultyFilter !== "all" && item.difficulty !== difficultyFilter)
-        return false;
-      if (q && !item.text.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [questions, search, subjectFilter, gradeFilter, difficultyFilter]);
+  const filtered = useMemo(() => questions.filter((q) => matchesQuestion(q, filters)), [questions, filters]);
 
   const openNew = () => {
     setEditing(null);
     setForm(blankQuestion());
+    setFormError("");
     setDialogOpen(true);
   };
 
   const openEdit = (q: Question) => {
     setEditing(q);
-    setForm({ ...q, options: [...q.options] });
+    setForm(cloneQuestion(q));
+    setFormError("");
     setDialogOpen(true);
   };
 
   const handleSave = () => {
-    if (!form.text.trim()) return;
-    if (form.options.some((o) => !o.trim())) return;
-
-    const bank = getQuestionBank();
-    if (editing) {
-      const idx = bank.findIndex((b) => b.id === editing.id);
-      if (idx >= 0) {
-        bank[idx] = {
-          ...form,
-          createdAt: editing.createdAt ?? new Date().toISOString(),
-          verification: editing.verification ?? "verified",
-        };
-      }
-    } else {
-      // Banka yeni əlavə olunan sual təsdiq gözləyir
-      bank.unshift({
-        ...form,
-        id: form.id || `q-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        verification: "pending",
-      });
+    setFormError("");
+    try {
+      const result = editing ? updateQuestionValidated({ ...form, id: editing.id }) : addQuestionValidated(form);
+      if (!result.success) { setFormError(result.error ?? "Sual saxlanılmadı."); return; }
+      reload();
+      setDialogOpen(false);
+    } catch {
+      setFormError("Sual yaddaşa yazılmadı. Yenidən cəhd edin.");
     }
-    saveQuestionBank(bank);
-    reload();
-    setDialogOpen(false);
   };
 
   const handleDelete = (id: string) => {
     if (window.confirm("Bu sual bankdan silinsin?")) {
-      deleteQuestionFromBank(id);
-      reload();
+      try { deleteQuestionFromBank(id); reload(); }
+      catch { window.alert("Sual silinmədi. Yenidən cəhd edin."); }
     }
+  };
+
+  const handleCsvFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvFile(file);
+    setCsvText("");
+    setCsvError("");
+    setCsvSuccess("");
+    setCsvPreview(null);
+  };
+
+  const handleCsvPreview = () => {
+    if (!csvFile) { setCsvPreview(previewQuestionsFromCsv(csvText)); return; }
+    if (csvFile.size > 2 * 1024 * 1024) { setCsvError("Fayl 2 MiB həddini keçir."); return; }
+    setCsvError("");
+    setCsvSuccess("");
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const csv = String(e.target?.result ?? "");
+      setCsvText(csv);
+      setCsvPreview(previewQuestionsFromCsv(csv));
+    };
+    reader.onerror = () => setCsvError("CSV faylı oxunmadı. Faylı yenidən seçin.");
+    reader.readAsText(csvFile);
+  };
+
+  const handleCsvImport = () => {
+    setCsvError("");
+    setCsvSuccess("");
+    if (!csvPreview || csvPreview.errors.length || !csvPreview.success.length) {
+      setCsvError("İdxal edilmədi. Əvvəlcə bütün sətir xətalarını düzəldin.");
+      return;
+    }
+    setCsvImporting(true);
+    try {
+      const result = importQuestionsFromCsv(csvText);
+      if (!result.success) {
+        setCsvPreview((previous) => previous ? { ...previous, errors: result.errors } : previous);
+        setCsvError("İdxal edilmədi. Heç bir sual əlavə olunmadı.");
+        return;
+      }
+      setQuestions(result.questions ?? []);
+      setCsvSuccess(`İdxal tamamlandı: ${result.added} sual əlavə edildi.`);
+      setCsvFile(null);
+      setCsvText("");
+      setCsvPreview(null);
+    } catch {
+      setCsvError("İdxal zamanı xəta baş verdi. Yenidən cəhd edin.");
+    } finally {
+      setCsvImporting(false);
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    downloadCsvTemplate();
   };
 
   return (
@@ -173,32 +225,18 @@ export default function QuestionsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Axtarış */}
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Sual axtar…"
-              className="w-56 pl-9"
-            />
-          </div>
-
-          {/* Fənn filtri */}
-          <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Fənn" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Bütün fənlər</SelectItem>
-              {SUBJECTS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
+          <Button
+            variant="outline"
+            onClick={() => { setCsvError(""); setCsvSuccess(""); setCsvDialogOpen(true); }}
+            className="gap-1.5"
+          >
+            <Download className="size-4" />
+            CSV-dən idxal
+          </Button>
+          <Button variant="outline" onClick={() => {
+            try { const blob = new Blob(["\uFEFF" + exportQuestionsToCsv(filtered)], { type: "text/csv;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "suallar.csv"; link.click(); URL.revokeObjectURL(url); }
+            catch { window.alert("İxrac tamamlanmadı."); }
+          }}>CSV-yə ixrac ({filtered.length})</Button>
           <Button
             onClick={openNew}
             className="gap-1.5 bg-brand-700 hover:bg-brand-800 text-white"
@@ -209,55 +247,7 @@ export default function QuestionsPage() {
         </div>
       </div>
 
-      {/* ===== Filtrlər paneli ===== */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
-        <Filter className="size-4 text-neutral-400" />
-        <span className="text-xs font-medium text-neutral-500">Filtrlər:</span>
-
-        <Select value={gradeFilter} onValueChange={setGradeFilter}>
-          <SelectTrigger className="h-8 w-36 text-xs">
-            <SelectValue placeholder="Sinif" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Bütün siniflər</SelectItem>
-            {GRADES.map((g) => (
-              <SelectItem key={g} value={g}>
-                {g}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-          <SelectTrigger className="h-8 w-36 text-xs">
-            <SelectValue placeholder="Çətinlik" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Bütün çətinliklər</SelectItem>
-            {DIFFICULTIES.map((d) => (
-              <SelectItem key={d} value={d}>
-                {d}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {(search || subjectFilter !== "all" || gradeFilter !== "all" || difficultyFilter !== "all") && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setSearch("");
-              setSubjectFilter("all");
-              setGradeFilter("all");
-              setDifficultyFilter("all");
-            }}
-            className="ml-auto text-xs text-neutral-500"
-          >
-            Filtrləri sıfırla
-          </Button>
-        )}
-      </div>
+      <QuestionBankFilters questions={questions} value={filters} onChange={setFilters} />
 
       {/* ===== Suallar grid ===== */}
       {filtered.length === 0 ? (
@@ -294,19 +284,21 @@ export default function QuestionsPage() {
                   )}
                 </div>
 
+                {q.verification === "rejected" && <p className="text-sm text-danger-fg">Rədd səbəbi: {q.reviewHistory?.at(-1)?.reason ?? "Səbəb tarixçədə yoxdur."}</p>}
                 {/* Sual mətni */}
                 <p className="line-clamp-2 text-base font-medium text-neutral-900">
                   {q.text}
                 </p>
 
+                <QuestionImage image={q.image} />
                 {/* Variantlar (qısa) */}
                 <ul className="space-y-1 text-xs text-neutral-500">
                   {q.options.slice(0, 4).map((o, i) => (
                     <li
                       key={i}
-                      className={`truncate ${i === q.correct ? "font-semibold text-brand-700" : ""}`}
+                      className={`truncate ${(Array.isArray(q.correct) ? q.correct.includes(i) : i === q.correct) ? "font-semibold text-brand-700" : ""}`}
                     >
-                      {String.fromCharCode(65 + i)}) {o}
+                      {String.fromCharCode(65 + i)}) {o}<QuestionImage image={q.optionImages?.[i]} />
                     </li>
                   ))}
                 </ul>
@@ -365,7 +357,7 @@ export default function QuestionsPage() {
                     <SelectValue placeholder="Fənn" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SUBJECTS.map((s) => (
+                    {[...new Set([...SUBJECTS, ...questions.map((q) => q.subject).filter((value): value is string => !!value)])].map((s) => (
                       <SelectItem key={s} value={s}>
                         {s}
                       </SelectItem>
@@ -383,7 +375,7 @@ export default function QuestionsPage() {
                     <SelectValue placeholder="Sinif" />
                   </SelectTrigger>
                   <SelectContent>
-                    {GRADES.map((g) => (
+                    {[...new Set([...GRADES, ...questions.map((q) => q.grade).filter((value): value is string => !!value)])].map((g) => (
                       <SelectItem key={g} value={g}>
                         {g}
                       </SelectItem>
@@ -413,6 +405,25 @@ export default function QuestionsPage() {
               </div>
             </div>
 
+            {formError && <p role="alert" className="rounded-md border border-danger/25 bg-danger-soft p-3 text-sm text-danger-fg">{formError}</p>}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="question-type">Sualın növü</Label>
+                <Select value={form.type} onValueChange={(value) => { setForm((q) => normalizeQuestionType(q, value as QuestionType)); setFormError(""); }}>
+                  <SelectTrigger id="question-type"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Tək düzgün cavab</SelectItem>
+                    <SelectItem value="true_false">Doğru / Yanlış</SelectItem>
+                    <SelectItem value="multiple">Bir neçə düzgün cavab</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="question-points">Bal dəyəri</Label>
+                <Input id="question-points" type="number" min="0.01" step="any" value={Number.isFinite(form.points) ? form.points : ""} onChange={(e) => setForm((q) => ({ ...q, points: e.target.value === "" ? NaN : Number(e.target.value) }))} />
+              </div>
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="qtext">Sualın mətni</Label>
               <Textarea
@@ -424,40 +435,38 @@ export default function QuestionsPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-neutral-500">
-                Cavab variantları (düzgününü seçin):
-              </p>
-              <RadioGroup
-                value={String(form.correct)}
-                onValueChange={(v) =>
-                  setForm((f) => ({ ...f, correct: parseInt(v, 10) }))
-                }
-                className="gap-2"
-              >
-                {form.options.map((opt, oi) => (
-                  <div
-                    key={oi}
-                    className="flex items-center gap-3 rounded-md border border-neutral-200 bg-neutral-50/50 px-3 py-2"
-                  >
-                    <RadioGroupItem value={String(oi)} id={`opt-${oi}`} />
-                    <span className="w-5 text-xs font-semibold text-neutral-500">
-                      {String.fromCharCode(65 + oi)}
-                    </span>
-                    <Input
-                      value={opt}
-                      onChange={(e) => {
-                        const opts = [...form.options];
-                        opts[oi] = e.target.value;
-                        setForm((f) => ({ ...f, options: opts }));
-                      }}
-                      placeholder={`Variant ${String.fromCharCode(65 + oi)}`}
-                      className="flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                    />
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
+            <div className="grid gap-2"><Label htmlFor="question-topic">Mövzu</Label><Input id="question-topic" value={form.topic ?? ""} onChange={(e) => setForm((q) => ({ ...q, topic: e.target.value }))} /><Label htmlFor="question-tags">Etiketlər (nöqtəli vergüllə)</Label><Input id="question-tags" value={(form.tags ?? []).join(";")} onChange={(e) => setForm((q) => ({ ...q, tags: e.target.value.split(";") }))} /></div>
+            <QuestionMediaEditor question={form} onChange={setForm} />
+            <fieldset className="space-y-2">
+              <legend className="mb-2 text-xs font-medium text-neutral-500">
+                {form.type === "multiple" ? "Cavab variantları (bir və ya bir neçə düzgün cavab seçin):" : "Cavab variantları (bir düzgün cavab seçin):"}
+              </legend>
+              {form.type === "multiple" ? (
+                <div className="space-y-2">
+                  {form.options.map((option, index) => (
+                    <div key={index} className="flex items-center gap-3 rounded-md border border-neutral-200 bg-neutral-50/50 px-3 py-2">
+                      <Checkbox aria-label={`${String.fromCharCode(65 + index)} variantı düzgündür`} checked={Array.isArray(form.correct) && form.correct.includes(index)} onCheckedChange={(checked) => setForm((q) => {
+                        const correct = Array.isArray(q.correct) ? q.correct : [];
+                        return { ...q, correct: checked === true ? [...new Set([...correct, index])] : correct.filter((i) => i !== index) };
+                      })} />
+                      <span className="w-5 text-xs font-semibold text-neutral-500">{String.fromCharCode(65 + index)}</span>
+                      <Input aria-label={`Variant ${String.fromCharCode(65 + index)}`} value={option} onChange={(e) => setForm((q) => ({ ...q, options: q.options.map((o, i) => i === index ? e.target.value : o) }))} placeholder={`Variant ${String.fromCharCode(65 + index)}`} className="flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <RadioGroup aria-label="Düzgün cavab" value={String(form.correct)} onValueChange={(value) => setForm((q) => ({ ...q, correct: Number(value) }))} className="gap-2">
+                  {form.options.map((option, index) => (
+                    <div key={index} className="flex items-center gap-3 rounded-md border border-neutral-200 bg-neutral-50/50 px-3 py-2">
+                      <RadioGroupItem aria-label={`${String.fromCharCode(65 + index)} variantı düzgündür`} value={String(index)} id={`opt-${index}`} />
+                      <span className="w-5 text-xs font-semibold text-neutral-500">{String.fromCharCode(65 + index)}</span>
+                      {form.type === "true_false" ? <Label htmlFor={`opt-${index}`} className="flex-1 py-2">{option}</Label> :
+                        <Input aria-label={`Variant ${String.fromCharCode(65 + index)}`} value={option} onChange={(e) => setForm((q) => ({ ...q, options: q.options.map((o, i) => i === index ? e.target.value : o) }))} placeholder={`Variant ${String.fromCharCode(65 + index)}`} className="flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" />}
+                    </div>
+                  ))}
+                </RadioGroup>
+              )}
+            </fieldset>
           </div>
 
           <DialogFooter>
@@ -471,12 +480,101 @@ export default function QuestionsPage() {
             <Button
               type="button"
               onClick={handleSave}
-              disabled={!form.text.trim() || form.options.some((o) => !o.trim())}
               className="bg-brand-700 hover:bg-brand-800 text-white"
             >
               Yadda Saxla
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CSV Import Dialog */}
+      <Dialog open={csvDialogOpen} onOpenChange={setCsvDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>CSV-dən Sual İdxalı</DialogTitle>
+            <DialogDescription>
+              CSV faylını seçin və bütün sətirləri yoxlayın. Bir xəta və ya təkrar olduqda heç bir sual əlavə edilmir.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {csvError && <p role="alert" className="rounded-md border border-danger/25 bg-danger-soft p-3 text-sm text-danger-fg">{csvError}</p>}
+            {csvSuccess && <p role="status" className="rounded-md border border-success/25 bg-success-soft p-3 text-sm text-success-fg">{csvSuccess}</p>}
+            {csvPreview ? (
+              <>
+                <div className="rounded-md border border-neutral-200 bg-white p-4">
+                  <h3 className="font-medium text-neutral-900 mb-2">Önizləmə</h3>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-neutral-700">
+                      <span className="font-medium">{csvPreview.success.length}</span> sual format yoxlamasından keçdi. Hamısı birlikdə idxal ediləcək.
+                    </p>
+                    {csvPreview.errors.length > 0 && (
+                      <p className="text-danger-fg">
+                        <span className="font-medium">{csvPreview.errors.length}</span> sətirdə xəta.
+                      </p>
+                    )}
+                    {csvPreview.errors.length > 0 && (
+                      <details open className="mt-2">
+                        <summary className="text-xs text-neutral-500 cursor-pointer">Xətaları göstər</summary>
+                        <ul role="alert" className="mt-1 text-xs text-danger-fg space-y-1">
+                          {csvPreview.errors.map((e, idx) => (
+                            <li key={idx}>Sətir {e.row}: {e.error}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => { setCsvPreview(null); setCsvError(""); }}>
+                    Yenidən seç
+                  </Button>
+                  <Button onClick={handleCsvImport} disabled={csvImporting || csvPreview.errors.length > 0 || csvPreview.success.length === 0}>
+                    {csvImporting ? "İmport edilir…" : "İmport et"}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <div className="rounded-md border border-neutral-200 bg-white p-4">
+                    <h3 className="font-medium text-neutral-900 mb-2">CSV Şablonu</h3>
+                    <p className="text-sm text-neutral-500 mb-3">
+                      Aşağıdakı şablonu endirib, sualları daxil edin. &ldquo;type&rdquo; sütunu: single, true_false, multiple.
+                      &ldquo;correct&rdquo; sütunu: single/true_false üçün indeks (0-based), multiple üçün nöqtəli vergüllə ayrılmış indekslər (məs. 0;2).
+                    </p>
+                    <Button variant="outline" onClick={handleDownloadTemplate}>
+                      <Download className="size-4 mr-2" />
+                      Şablonu endir
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="csv-file" className="block text-sm font-medium text-neutral-700">CSV faylı seçin</label>
+                    <Input
+                      id="csv-file"
+                      type="file"
+                      accept=".csv,.tsv,.txt"
+                      onChange={handleCsvFileSelect}
+                      className="w-full"
+                    />
+                    {csvFile && (
+                      <p className="text-xs text-neutral-500">Seçilən: {csvFile.name}</p>
+                    )}
+                    <Label htmlFor="csv-paste">Excel / Word cədvəlini başlıq sətri ilə yapışdırın (CSV/TSV)</Label>
+                    <Textarea id="csv-paste" rows={5} value={csvText} onChange={(e) => { setCsvFile(null); setCsvText(e.target.value); setCsvError(""); setCsvSuccess(""); }} />
+                    <p className="text-xs text-neutral-500">UTF-8 CSV/TSV, ən çox 2 MiB. .xlsx/.docx, daxili şəkil və Word düsturları çevrilmir. metadata sütununu saxlayın.</p>
+                    <Button
+                      onClick={handleCsvPreview}
+                      disabled={!csvFile && !csvText.trim()}
+                      className="w-full"
+                    >
+                      Önizlə
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

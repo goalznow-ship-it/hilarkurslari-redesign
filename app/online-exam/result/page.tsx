@@ -4,7 +4,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import type { Exam, ExamResult } from "@/lib/types";
-import { getExam, initStore, getResult } from "@/lib/store";
+import { getExam, initStore, getResult, scoreAnswer } from "@/lib/store";
+import { QuestionImage } from "@/components/QuestionMedia";
 import { formatDateTime, formatDuration } from "@/lib/helpers";
 
 function ResultContent() {
@@ -112,8 +113,9 @@ function ResultContent() {
         <h2 className="mt-8 mb-4 text-lg font-semibold text-neutral-900">Sualların təhlili</h2>
         <div className="space-y-3">
           {result.answers.map((given, i) => {
-            const q = exam?.questions[i];
-            const isCorrect = given === q?.correct;
+            const q = (result.questions ?? exam?.questions)?.[i];
+            const scoreResult = q ? scoreAnswer(q, given) : { isCorrect: false, earnedPoints: 0 };
+            const isCorrect = scoreResult.isCorrect;
             return (
               <div
                 key={i}
@@ -126,11 +128,16 @@ function ResultContent() {
                     <p className="font-medium text-neutral-900">
                       {i + 1}. {q.text}
                     </p>
+                    <QuestionImage image={q.image} />
+                    <div className="space-y-2">{q.options.map((option, index) => q.optionImages?.[index] ? <div key={index}><p className="text-sm">{String.fromCharCode(65 + index)}) {option}</p><QuestionImage image={q.optionImages[index]} /></div> : null)}</div>
+                    {q.explanation && <p className="mt-2 text-sm text-neutral-600">İzah: {q.explanation}</p>}
                     <p className="mt-1 text-neutral-700">
                       Cavabınız:{" "}
                       <span className="font-medium">
                         {given !== null
-                          ? `${String.fromCharCode(65 + given)}) ${q.options[given]}`
+                          ? (Array.isArray(given)
+                              ? given.map((g) => `${String.fromCharCode(65 + g)}) ${q.options[g]}`).join(", ")
+                              : `${String.fromCharCode(65 + given)}) ${q.options[given]}`)
                           : "— cavabsız"}
                       </span>
                     </p>
@@ -138,7 +145,9 @@ function ResultContent() {
                       <p className="mt-0.5 text-success-fg">
                         Düzgün cavab:{" "}
                         <span className="font-medium">
-                          {String.fromCharCode(65 + q.correct)}) {q.options[q.correct]}
+                          {Array.isArray(q.correct)
+                            ? q.correct.map((c, idx) => (idx > 0 ? ", " : "") + String.fromCharCode(65 + c) + ") " + q.options[c]).join("")
+                            : String.fromCharCode(65 + q.correct) + ") " + q.options[q.correct]}
                         </span>
                       </p>
                     )}

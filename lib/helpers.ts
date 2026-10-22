@@ -1,8 +1,9 @@
 import type { Exam, ExamPhase, ExamStatus } from "./types";
 
 export function examStatus(exam: Exam, now: number = Date.now()): ExamStatus {
-  if (now < new Date(exam.startsAt).getTime()) return "planned";
-  if (now > new Date(exam.endsAt).getTime()) return "ended";
+  const start = Date.parse(exam.startsAt), end = Date.parse(exam.endsAt);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || now >= end) return "ended";
+  if (now < start) return "planned";
   return "active";
 }
 
@@ -87,4 +88,12 @@ export function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Spreadsheet formulas must remain text, including control/whitespace prefixes. */
+export function escapeCsvCell(value: string | number | undefined): string {
+  if (value === undefined) return "";
+  let text = String(value);
+  if (/^[\s\u0000-\u001f]*[=+\-@]/.test(text) || /^[\t\r\n]/.test(text)) text = "'" + text;
+  return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
 }

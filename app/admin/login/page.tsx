@@ -10,7 +10,7 @@ import { z } from "zod";
 import { ArrowLeft, Lock, ShieldCheck } from "lucide-react";
 
 import { Button, Field, Input } from "@/components/ui";
-import { ADMIN_PASSWORD, ADMIN_USER, getSession, setSession } from "@/lib/store";
+import { authenticateUser, getCurrentUser, setSession } from "@/lib/store";
 
 const schema = z.object({
   username: z.string().trim().min(1, "İstifadəçi adını yazın."),
@@ -35,40 +35,43 @@ export default function AdminLoginPage() {
 
   // Artıq girişli istifadəçi birbaşa panele yönləndirilir
   useEffect(() => {
-    if (getSession()) router.replace("/account");
+    const user = getCurrentUser();
+    if (user) router.replace(user.role === "seller" ? "/account/seller-sales" : "/account");
   }, [router]);
 
-  const onSubmit = handleSubmit((values) => {
+  const onSubmit = handleSubmit(async (values) => {
     setError(null);
-    if (
-      values.username.trim() === ADMIN_USER &&
-      values.password === ADMIN_PASSWORD
-    ) {
-      setSession(values.username.trim());
-      router.push("/account");
-      return;
+    try {
+      const result = await authenticateUser(values.username.trim(), values.password);
+      if (result.success && result.user) {
+        setSession(result.user.email);
+        router.push(result.user.role === "seller" ? "/account/seller-sales" : "/account");
+        return;
+      }
+      setError(result.error ?? "İstifadəçi adı və ya şifrə yanlışdır.");
+    } catch {
+      setError("Giriş yadda saxlanılmadı. Yenidən cəhd edin.");
     }
-    setError("İstifadəçi adı və ya şifrə yanlışdır.");
   });
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-neutral-50">
+    <div className="flex min-h-[100dvh] flex-col student-portal">
       <header className="px-5 py-6 sm:px-8">
         <Link href="/" className="inline-block">
           <Image
-            src="/hilal-logo.png"
+            src="/hilal-original.png"
             alt="Hilal Kursları"
-            width={768}
-            height={240}
+            width={64}
+            height={64}
             priority
-            className="h-auto w-[150px]"
+            className="size-16"
           />
         </Link>
       </header>
 
       <main className="flex flex-1 items-center justify-center px-5 pb-16">
         <div className="w-full max-w-sm">
-          <div className="rounded-lg border border-neutral-200 bg-white p-7 shadow-sm">
+          <div className="rounded-xl border border-neutral-200 bg-white p-8 shadow-lg">
             <div className="mb-6 flex items-center gap-2.5">
               <span className="flex size-9 items-center justify-center rounded-md bg-brand-50 text-brand-700">
                 <ShieldCheck className="size-4.5" />
@@ -133,11 +136,11 @@ export default function AdminLoginPage() {
             <p className="mt-4 text-center text-xs text-neutral-500">
               Demo giriş:{" "}
               <span className="font-mono font-medium text-neutral-700">
-                {ADMIN_USER}
+                admin@hilalkurslari.az
               </span>{" "}
               /{" "}
               <span className="font-mono font-medium text-neutral-700">
-                {ADMIN_PASSWORD}
+                hilal123
               </span>
             </p>
           )}
