@@ -120,25 +120,25 @@ function handler(name, context) {
   vm.runInNewContext(code,context);
   return context.run;
 }
-test('CSV UI handler shows no success after storage exception and restores loading', () => {
+test('CSV UI handler shows no success after storage exception and restores loading', async () => {
   const source=csv([question('single')]), state={}; failWrite=true;
   const context={csvPreview:store.parseQuestionsFromCsv(source),csvText:source,importQuestionsFromCsv:store.importQuestionsFromCsv,reload:()=>assert.fail('must not reload after failure')};
   for(const name of ['setCsvError','setCsvSuccess','setCsvImporting','setCsvPreview','setCsvFile','setCsvText']) context[name]=value=>{state[name]=value;};
-  handler('handleCsvImport',context)();
+  await handler('handleCsvImport',context)();
   assert.equal(state.setCsvSuccess,''); assert.ok(state.setCsvError); assert.equal(state.setCsvImporting,false); assert.equal(writes.length,0);
 });
-test('question UI handler persists selected multiple answers and rejects invalid drafts', () => {
+test('question UI handler persists selected multiple answers and rejects invalid drafts', async () => {
   const state={}; const context={form:question('multiple'),editing:null,addQuestionValidated:store.addQuestionValidated,updateQuestionValidated:store.updateQuestionValidated,reload:()=>{state.reloaded=true},setFormError:value=>state.error=value,setDialogOpen:value=>state.open=value};
-  handler('handleSave',context)(); assert.equal(state.open,false); assert.equal(state.reloaded,true); assert.deepEqual(plain(store.getQuestionBank()[0].correct),[0,2]);
+  await handler('handleSave',context)(); assert.equal(state.open,false); assert.equal(state.reloaded,true); assert.deepEqual(plain(store.getQuestionBank()[0].correct),[0,2]);
   writes=[];state.open=true;state.reloaded=false;context.form=question('multiple',{correct:[]});
-  handler('handleSave',context)(); assert.ok(state.error); assert.equal(state.open,true); assert.equal(state.reloaded,false); assert.equal(writes.length,0);
+  await handler('handleSave',context)(); assert.ok(state.error); assert.equal(state.open,true); assert.equal(state.reloaded,false); assert.equal(writes.length,0);
 });
-test('successful CSV handler uses committed bank directly without migration writes', () => {
+test('successful CSV handler uses committed bank directly without migration writes', async () => {
   const legacy={...original}; delete legacy.createdAt; data.set(bankKey,JSON.stringify([legacy]));
   const source=csv([question('true_false')]), state={};
   const context={csvPreview:store.parseQuestionsFromCsv(source),csvText:source,importQuestionsFromCsv:store.importQuestionsFromCsv,reload:()=>assert.fail('must not reload/migrate existing bank')};
   for(const name of ['setCsvError','setCsvSuccess','setCsvImporting','setCsvPreview','setCsvFile','setCsvText','setQuestions']) context[name]=value=>{state[name]=value;};
-  handler('handleCsvImport',context)();
+  await handler('handleCsvImport',context)();
   assert.ok(state.setCsvSuccess); assert.deepEqual(writes,[bankKey]);
   assert.deepEqual(plain(state.setQuestions.find(q=>q.id==='original')),legacy);
   assert.deepEqual(JSON.parse(data.get(bankKey)).find(q=>q.id==='original'),legacy);

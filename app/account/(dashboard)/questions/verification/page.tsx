@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getCurrentUser, getQuestionBank, reviewQuestion } from "@/lib/store";
+import { getCurrentUser, getQuestionBank, reviewQuestion } from "@/lib/backend-store";
 import type { Question } from "@/lib/types";
 import { Button, Card, CardContent, Label, Textarea } from "@/components/ui";
 import { QuestionImage } from "@/components/QuestionMedia";
@@ -21,9 +21,9 @@ export default function QuestionVerificationPage() {
     }, 0);
     return () => clearTimeout(timer);
   }, []);
-  const approve = (id: string, status: "verified" | "rejected" = "verified") => {
+  const approve = async (id: string, status: "verified" | "rejected" = "verified") => {
     setError(""); setSuccess("");
-    const result = reviewQuestion(id, status, reasons[id] ?? "");
+    const result = await reviewQuestion(id, status, reasons[id] ?? "");
     if (!result.success) { setError(result.error ?? "Sual təsdiqlənmədi."); return; }
     setQuestions(result.questions ?? []); setSuccess(status === "verified" ? "Sual təsdiqləndi." : "Sual səbəblə rədd edildi.");
   };

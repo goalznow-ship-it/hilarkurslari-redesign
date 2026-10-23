@@ -349,7 +349,9 @@ export function getCurrentUser(): User | undefined {
 
 export function canAccessPage(user: User, pathname: string): boolean {
   if (!user.active) return false;
+  if(user.companyId&&pathname.startsWith("/account/migration"))return false;
   if (user.role === "admin") return true;
+  if (pathname.startsWith("/account/migration")) return false;
   if (user.role === "seller") return pathname === "/account/seller-sales";
   if (pathname.startsWith("/account/users") || pathname.startsWith("/account/seller-sales")) return false;
   if (user.role === "teacher") return !["/account/reports", "/account/companies", "/account/years"].some((path) => pathname.startsWith(path));
@@ -659,10 +661,10 @@ export function scoreAnswer(question: Question, given: number | number[] | null)
 }
 
 /** Mövcud qayda: normallaşdırılmış mətn, variantlar və düzgün cavablar eynidir. */
-function sameQuestion(a: Question, b: Question): boolean {
+export function sameQuestion(a: Pick<Question, "text" | "options" | "correct" | "image" | "optionImages">, b: Pick<Question, "text" | "options" | "correct" | "image" | "optionImages">): boolean {
   const text = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
   const answers = (value: number | number[]) => JSON.stringify(Array.isArray(value) ? [...value].sort((a, b) => a - b) : value);
-  const media = (q: Question) => JSON.stringify([q.image?.url ?? "", q.options.map((_, i) => q.optionImages?.[i]?.url ?? "")]);
+  const media = (q: Pick<Question, "options" | "image" | "optionImages">) => JSON.stringify([q.image?.url ?? "", q.options.map((_, i) => q.optionImages?.[i]?.url ?? "")]);
   return media(a) === media(b) && text(a.text) === text(b.text) && a.options.length === b.options.length &&
     answers(a.correct) === answers(b.correct) &&
     a.options.every((option, i) => text(option) === text(b.options[i]));

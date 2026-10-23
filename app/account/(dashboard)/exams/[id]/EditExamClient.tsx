@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import ExamForm from "@/components/ExamForm";
-import { getExam, getSession } from "@/lib/store";
+import { getExam, getSession } from "@/lib/backend-store";
 import type { Exam } from "@/lib/types";
 
 export default function EditExamClient({ id }: { id: string }) {

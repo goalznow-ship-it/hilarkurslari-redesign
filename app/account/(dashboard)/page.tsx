@@ -41,11 +41,12 @@ import {
 } from "@/components/ui";
 import {
   getExams,
+  getTicketSales,
   getQuestionBank,
   getResults,
   getSession,
   initStore,
-} from "@/lib/store";
+} from "@/lib/backend-store";
 import { examStatus, formatDateTime } from "@/lib/helpers";
 import type { Exam, ExamResult, Question } from "@/lib/types";
 
@@ -54,7 +55,6 @@ import type { Exam, ExamResult, Question } from "@/lib/types";
 /* -------------------------------------------------------------------------- */
 
 const DAY_MS = 86_400_000;
-const TICKET_PRICE = 25; // ₼
 const RANGES = [
   { days: 7, label: "7 gün" },
   { days: 30, label: "30 gün" },
@@ -163,7 +163,8 @@ export default function AdminDashboardPage() {
       .filter((e) => examStatus(e, now) === "active")
       .map((exam) => {
         const examResults = results.filter((r) => r.examId === exam.id);
-        const soldTickets = examResults.filter((r) => Boolean(r.ticketCode)).length;
+        const examSales = getTicketSales().filter(sale=>sale.examId===exam.id);
+        const soldTickets = examSales.length;
         const start = new Date(exam.startsAt).getTime();
         const end = new Date(exam.endsAt).getTime();
         const elapsed = Math.min(Math.max(now - start, 0), end - start);
@@ -173,7 +174,7 @@ export default function AdminDashboardPage() {
           participants: examResults.length,
           registered: exam.ticketCodes.length,
           soldTickets,
-          revenue: soldTickets * TICKET_PRICE,
+          revenue: examSales.reduce((sum,sale)=>sum+sale.price,0),
           remaining: Math.max(end - now, 0),
           progress: Math.min(Math.round((elapsed / total) * 100), 100),
         };
@@ -274,8 +275,9 @@ export default function AdminDashboardPage() {
       const bucket = buckets.get(dayKey(new Date(r.finishedAt).getTime()));
       if (!bucket) continue;
       bucket.attempts += 1;
-      if (r.ticketCode) bucket.tickets += 1;
+
     }
+    for(const sale of getTicketSales()){const bucket=buckets.get(dayKey(new Date(sale.soldAt).getTime()));if(bucket)bucket.tickets++;}
     for (const q of questions) {
       if (!q.createdAt) continue;
       const bucket = buckets.get(dayKey(new Date(q.createdAt).getTime()));

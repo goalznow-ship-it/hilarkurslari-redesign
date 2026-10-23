@@ -4,12 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "build": "next build --webpack",
+    "start": "node scripts/check-env.mjs && next start",
+    "lint": "eslint",
+    "test": "node --test tests/questions.mjs tests/regression.mjs tests/server-unit.mjs tests/config.mjs",
+    "test:integration": "node --test --test-concurrency=1 tests/rate-limiter.mjs tests/server-integration.mjs tests/overnight-integration.mjs",
+    "db:generate": "prisma generate --schema prisma/schema.prisma && node scripts/verify-prisma-client.mjs",
+    "db:validate": "prisma validate --schema prisma/schema.prisma",
+    "build:turbo": "next build --turbopack",
+    "check:env": "node scripts/check-env.mjs"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.3",
     "@hookform/resolvers": "^5.9.2",
+    "@prisma/client": "^5.22.0",
     "@radix-ui/react-checkbox": "^1.4.1",
     "@radix-ui/react-dialog": "^1.3.1",
     "@radix-ui/react-icons": "^1.3.2",
@@ -18,9 +26,11 @@
     "@radix-ui/react-select": "^2.4.1",
     "@radix-ui/react-slot": "^1.5.0",
     "@radix-ui/react-tabs": "^1.2.1",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "lucide-react": "^1.60.0",
     "next": "16.4.2",
+    "next-auth": "^4.24.15",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-hook-form": "^7.90.0",
@@ -29,12 +39,15 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/turbopack": "^4",
+    "@types/cookie": "^0.6.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
+    "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

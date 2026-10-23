@@ -10,7 +10,8 @@ import { z } from "zod";
 import { ArrowLeft, Lock, ShieldCheck } from "lucide-react";
 
 import { Button, Field, Input } from "@/components/ui";
-import { authenticateUser, getCurrentUser, setSession } from "@/lib/store";
+import { request } from "@/lib/backend-store";
+import type { User } from "@/lib/types";
 
 const schema = z.object({
   username: z.string().trim().min(1, "İstifadəçi adını yazın."),
@@ -35,22 +36,20 @@ export default function AdminLoginPage() {
 
   // Artıq girişli istifadəçi birbaşa panele yönləndirilir
   useEffect(() => {
-    const user = getCurrentUser();
-    if (user) router.replace(user.role === "seller" ? "/account/seller-sales" : "/account");
+    void request<{user:User}>("/api/auth/me").then(({user})=>{if(user) router.replace(user.role === "seller" ? "/account/seller-sales" : "/account");}).catch(()=>{});
   }, [router]);
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
     try {
-      const result = await authenticateUser(values.username.trim(), values.password);
+      const result = await request<{success:boolean;user?:User;error?:string}>("/api/auth/login", "POST", {email:values.username.trim(),password:values.password});
       if (result.success && result.user) {
-        setSession(result.user.email);
         router.push(result.user.role === "seller" ? "/account/seller-sales" : "/account");
         return;
       }
       setError(result.error ?? "İstifadəçi adı və ya şifrə yanlışdır.");
-    } catch {
-      setError("Giriş yadda saxlanılmadı. Yenidən cəhd edin.");
+    } catch(error) {
+      setError(error instanceof Error?error.message:"Giriş yadda saxlanılmadı. Yenidən cəhd edin.");
     }
   });
 
@@ -132,18 +131,6 @@ export default function AdminLoginPage() {
             </form>
           </div>
 
-          {process.env.NODE_ENV !== "production" && (
-            <p className="mt-4 text-center text-xs text-neutral-500">
-              Demo giriş:{" "}
-              <span className="font-mono font-medium text-neutral-700">
-                admin@hilalkurslari.az
-              </span>{" "}
-              /{" "}
-              <span className="font-mono font-medium text-neutral-700">
-                hilal123
-              </span>
-            </p>
-          )}
 
           <Link
             href="/"

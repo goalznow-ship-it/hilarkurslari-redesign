@@ -14,7 +14,7 @@ import {
   Wifi,
 } from "lucide-react";
 
-import { getExam, getExams, getResults, getSession, initStore, saveExam } from "@/lib/store";
+import { getExam, getExams, getResults, getSession, initStore, addTickets } from "@/lib/backend-store";
 import { normalizeTicket } from "@/lib/helpers";
 import { examStatus, formatDateTime } from "@/lib/helpers";
 import type { Exam, ExamResult } from "@/lib/types";
@@ -191,19 +191,10 @@ export default function OnlineExamsPage() {
       return;
     }
 
-    // All validations passed - combine existing and new codes
-    const allCodes = [...new Set([...existingCodes, ...normalizedSubmitted])];
-
-    // Save with only ticketCodes updated, preserving all other latest properties
+    // The server appends to the current record atomically; never send a stale full exam.
     let result;
     try {
-      result = saveExam(
-        {
-          ...latestExam,
-          ticketCodes: allCodes,
-        },
-        true,
-      );
+      result = await addTickets(latestExam.id, normalizedSubmitted);
     } catch {
       setSavingTickets(false);
       setTicketError("Məlumat bazası yazılarkən xəta baş verdi. Yenidən cəhd edin.");

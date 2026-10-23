@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
-import { getExams, getResults, initStore, getSession } from "@/lib/store";
+import { request, refreshAdminState, getExams, getResults, initStore, getSession } from "@/lib/backend-store";
 import { formatDateTime } from "@/lib/helpers";
 import type { Exam, ExamResult } from "@/lib/types";
 
@@ -12,6 +12,10 @@ export default function ResultsClient({
   searchParams: Promise<{ examId?: string }>;
 }) {
   const router = useRouter();
+  const [finalizing,setFinalizing]=useState(false);
+  const [feedback,setFeedback]=useState("");
+  const [finalizeError,setFinalizeError]=useState("");
+  const finalize=async()=>{if(finalizing)return;setFinalizing(true);setFeedback("");setFinalizeError("");try{const result=await request<{finalized:number;failed:number}>("/api/attempts/finalize-expired","POST",{});await refreshAdminState();setResults(getResults());setFeedback(`${result.finalized} vaxtı bitmiş cəhd yekunlaşdı.`);if(result.failed)setFinalizeError(`${result.failed} cəhd əl ilə yoxlanmalıdır; əvvəlki məlumatlar qorundu.`);}catch(error){setFinalizeError(error instanceof Error?error.message:"Yekunlaşdırılmadı.");}finally{setFinalizing(false);}};
   const params = use(searchParams);
 
   const [exams, setExams] = useState<Exam[]>([]);
@@ -49,6 +53,7 @@ export default function ResultsClient({
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-3"><button type="button" disabled={finalizing} onClick={finalize} className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-brand-700 disabled:opacity-50">{finalizing?"Yekunlaşdırılır…":"Vaxtı bitən cəhdləri yekunlaşdır"}</button>{feedback&&<p role="status" className="text-sm">{feedback}</p>}{finalizeError&&<p role="alert" className="text-sm text-danger-fg">{finalizeError}</p>}</div>
       {/* Səhifə başlığı */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>

@@ -5,47 +5,62 @@ export type QuestionImage = { url: string; alt: string };
 export type QuestionReview = { status: "verified" | "rejected"; reviewerId: string; reviewerName: string; reviewedAt: string; reason?: string };
 
 export type Question = {
+  companyId?: string;
+  updatedAt?: string;
   reviewHistory?: QuestionReview[];
   image?: QuestionImage;
   optionImages?: Array<QuestionImage | null>;
   id: string;
   text: string;
-  options: string[]; // for true_false: ["Doğru", "Yanlış"] (fixed)
-  correct: number | number[]; // index for single/true_false, array of indices for multiple
-  type: QuestionType; // "single" | "true_false" | "multiple"
+  options: string[];
+  correct: number | number[];
+  type: QuestionType;
   subject?: string;
-  topic?: string; // mövzu/ünvan
-  tags?: string[]; // əlavə etiketlər
-  grade?: string; // sinif, məs. "X sinif"
+  topic?: string;
+  tags?: string[];
+  grade?: string;
   difficulty?: "Asan" | "Orta" | "Çətin";
-  explanation?: string; // şərh/izahat
-  points?: number; // bal dəyəri (default 1)
-  createdAt?: string; // ISO string — banka əlavə olunma vaxtı
-  verification?: "pending" | "verified" | "rejected"; // təsdiq vəziyyəti
+  explanation?: string;
+  points?: number;
+  createdAt?: string;
+  verification?: "pending" | "verified" | "rejected";
 };
 
 export type Company = { id: string; name: string; code: string; active: boolean; createdAt: string };
 export type AcademicYear = { id: string; label: string; active: boolean; createdAt: string };
 
 export type Exam = {
+  revision?: string;
   companyId?: string;
   id: string;
   title: string;
   subject: string;
-  startsAt: string; // ISO string
-  endsAt: string; // ISO string
+  startsAt: string;
+  endsAt: string;
   durationMin: number;
   questions: Question[];
-  ticketCodes: string[]; // boş olsa — istənilən keçərli format qəbul edilir
+  ticketCodes: string[];
   createdAt: string;
-  status: ExamPhase; // kitabçanın hazırlıq vəziyyəti
-  code?: string; // imtahan kodu, məs. "RIY-2026-001"
-  grade?: string; // sinif, məs. "X Sinif"
-  block?: string; // blok, məs. "Blok"
-  academicYear?: string; // tədris ili, məs. "2026-2027"
-  variants?: number; // variant sayı
-  pdfReady?: boolean; // PDF çapı hazır olub olmaması
-  onlineEnabled?: boolean; // onlayn rejimdə şagirdlərə açıq olub olmaması
+  status: ExamPhase;
+  code?: string;
+  grade?: string;
+  block?: string;
+  academicYear?: string;
+  variants?: number;
+  pdfReady?: boolean;
+  onlineEnabled?: boolean;
+};
+
+export type SafeExam = {
+  id: string;
+  title: string;
+  subject: string;
+  startsAt: string;
+  endsAt: string;
+  durationMin: number;
+  questionCount: number;
+  onlineEnabled: boolean;
+  status: string;
 };
 
 export type ExamResult = {
@@ -56,15 +71,54 @@ export type ExamResult = {
   examTitle: string;
   fin: string;
   ticketCode: string;
-  answers: Array<number | number[] | null>; // support multiple choice
-  questions?: Question[]; // snapshot for historical review; legacy results fall back to exam
+  answers: Array<number | number[] | null>;
+  questions?: Question[];
+  questionsSnapshot?: Question[];
   correctCount: number;
   total: number;
-  score: number; // correct/total * 100, yuvarlaqlaşdırılmış
+  score: number;
   startedAt: string;
   finishedAt: string;
   timeSpentSec: number;
+  accessToken?: string;
+  attemptId?: string;
+  analysis?: Array<{
+    questionIndex: number;
+    questionText: string;
+    questionType: string;
+    options: string[];
+    given: number | number[] | null;
+    isCorrect: boolean;
+    earnedPoints: number;
+    points: number;
+    explanation?: string;
+    optionImages?: Array<QuestionImage | null>;
+    image?: QuestionImage;
+  }>;
 };
+
+export type ExamAttempt = {
+  id: string;
+  examId: string;
+  versionId: string;
+  fin: string;
+  ticketCode: string;
+  answers: Array<number | number[] | null>;
+  status: "in_progress" | "submitted" | "expired";
+  startedAt: string;
+  submittedAt?: string;
+  expiredAt?: string;
+  timeSpentSec: number;
+};
+
+export type ExamVersion = {
+  id: string;
+  examId: string;
+  questions: Question[];
+  createdAt: string;
+};
+
+export type QuestionVerification = "pending" | "verified" | "rejected";
 
 export type AdminSession = {
   user: string;
@@ -80,7 +134,6 @@ export type EntryData = {
 
 export type ExamStatus = "planned" | "active" | "ended";
 
-/** Kitabçanın hazırlıq vəziyyəti (admin panelindəki status rozeti) */
 export type ExamPhase = "preparing" | "first_ready" | "review" | "done";
 
 export type UserRole = "admin" | "coordinator" | "teacher" | "seller";
@@ -92,19 +145,21 @@ export type User = {
   email: string;
   role: UserRole;
   active: boolean;
-  passwordHash?: string; // SHA-256 hash of password
-  // Seller-specific fields
-  sellerExamIds?: string[]; // Exams this seller can sell tickets for
+  passwordHash?: string;
+  sellerExamIds?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type SchoolClass = {
   id: string;
-  name: string; // "9A", "Blok 1" kimi
-  grade: string; // "IX sinif"
-  section?: string; // "A", "Blok 1" (şöbə/blok)
-  teacher: string; // sinif rəhbəri/müəllim
+  name: string;
+  grade: string;
+  section?: string;
+  teacher: string;
   studentCount: number;
-  academicYear: string; // "2026-2027"
+  academicYear: string;
+  companyId?: string;
   createdAt: string;
 };
 
@@ -118,8 +173,8 @@ export type TicketSale = {
   sellerName: string;
   studentFIN: string;
   studentName?: string;
-  soldAt: string; // ISO string
-  price: number; // AZN
+  soldAt: string;
+  price: number;
 };
 
 export type SalesReportFilters = {

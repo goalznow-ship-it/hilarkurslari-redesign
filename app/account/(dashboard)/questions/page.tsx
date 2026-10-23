@@ -44,7 +44,7 @@ import {
   importQuestionsFromCsv,
   normalizeQuestionType,
   updateQuestionValidated,
-} from "@/lib/store";
+} from "@/lib/backend-store";
 import type { Question, QuestionType } from "@/lib/types";
 
 import { QuestionImage, QuestionMediaEditor } from "@/components/QuestionMedia";
@@ -138,10 +138,10 @@ export default function QuestionsPage() {
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setFormError("");
     try {
-      const result = editing ? updateQuestionValidated({ ...form, id: editing.id }) : addQuestionValidated(form);
+      const result = editing ? await updateQuestionValidated({ ...form, id: editing.id }) : await addQuestionValidated(form);
       if (!result.success) { setFormError(result.error ?? "Sual saxlanılmadı."); return; }
       reload();
       setDialogOpen(false);
@@ -150,9 +150,9 @@ export default function QuestionsPage() {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("Bu sual bankdan silinsin?")) {
-      try { deleteQuestionFromBank(id); reload(); }
+      try { await deleteQuestionFromBank(id); reload(); }
       catch { window.alert("Sual silinmədi. Yenidən cəhd edin."); }
     }
   };
@@ -182,7 +182,7 @@ export default function QuestionsPage() {
     reader.readAsText(csvFile);
   };
 
-  const handleCsvImport = () => {
+  const handleCsvImport = async () => {
     setCsvError("");
     setCsvSuccess("");
     if (!csvPreview || csvPreview.errors.length || !csvPreview.success.length) {
@@ -191,7 +191,7 @@ export default function QuestionsPage() {
     }
     setCsvImporting(true);
     try {
-      const result = importQuestionsFromCsv(csvText);
+      const result = await importQuestionsFromCsv(csvText);
       if (!result.success) {
         setCsvPreview((previous) => previous ? { ...previous, errors: result.errors } : previous);
         setCsvError("İdxal edilmədi. Heç bir sual əlavə olunmadı.");

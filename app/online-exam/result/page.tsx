@@ -3,28 +3,38 @@
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
-import type { Exam, ExamResult } from "@/lib/types";
-import { getExam, initStore, getResult, scoreAnswer } from "@/lib/store";
+import type { ExamResult } from "@/lib/types";
+import { getResultByToken } from "@/lib/api-client";
 import { QuestionImage } from "@/components/QuestionMedia";
 import { formatDateTime, formatDuration } from "@/lib/helpers";
 
 function ResultContent() {
   const searchParams = useSearchParams();
-  const rid = searchParams.get("rid");
+  const token = searchParams.get("token");
   const auto = searchParams.get("auto") === "1";
 
-  const [result, setResult] = useState<ExamResult | null | "loading">("loading");
-  const [exam, setExam] = useState<Exam | null>(null);
+  const [result, setResult] = useState<ExamResult | null | "loading">(token ? "loading" : null);
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      initStore();
-      const r = rid ? getResult(rid) ?? null : null;
-      setResult(r);
-      setExam(r ? getExam(r.examId) ?? null : null);
-    }, 0);
-    return () => clearTimeout(t);
-  }, [rid]);
+    if (!token) {
+      return;
+    }
+    let cancelled = false;
+    const loadResult = async () => {
+      try {
+        const data = await getResultByToken(token);
+        if (!cancelled) {
+          setResult(data);
+        }
+      } catch  {
+        if (!cancelled) {
+          setResult(null);
+        }
+      }
+    };
+    loadResult();
+    return () => { cancelled = true; };
+  }, [token]);
 
   if (result === "loading") {
     return (
@@ -112,57 +122,32 @@ function ResultContent() {
         {/* Sualların təhlili */}
         <h2 className="mt-8 mb-4 text-lg font-semibold text-neutral-900">Sualların təhlili</h2>
         <div className="space-y-3">
-          {result.answers.map((given, i) => {
-            const q = (result.questions ?? exam?.questions)?.[i];
-            const scoreResult = q ? scoreAnswer(q, given) : { isCorrect: false, earnedPoints: 0 };
-            const isCorrect = scoreResult.isCorrect;
-            return (
-              <div
-                key={i}
-                className={`rounded-md border px-4 py-3 text-sm ${
-                  isCorrect ? "border-success/25 bg-success-soft" : "border-danger/25 bg-danger-soft"
-                }`}
-              >
-                {q ? (
-                  <>
-                    <p className="font-medium text-neutral-900">
-                      {i + 1}. {q.text}
-                    </p>
-                    <QuestionImage image={q.image} />
-                    <div className="space-y-2">{q.options.map((option, index) => q.optionImages?.[index] ? <div key={index}><p className="text-sm">{String.fromCharCode(65 + index)}) {option}</p><QuestionImage image={q.optionImages[index]} /></div> : null)}</div>
-                    {q.explanation && <p className="mt-2 text-sm text-neutral-600">İzah: {q.explanation}</p>}
-                    <p className="mt-1 text-neutral-700">
-                      Cavabınız:{" "}
-                      <span className="font-medium">
-                        {given !== null
-                          ? (Array.isArray(given)
-                              ? given.map((g) => `${String.fromCharCode(65 + g)}) ${q.options[g]}`).join(", ")
-                              : `${String.fromCharCode(65 + given)}) ${q.options[given]}`)
-                          : "— cavabsız"}
-                      </span>
-                    </p>
-                    {!isCorrect && (
-                      <p className="mt-0.5 text-success-fg">
-                        Düzgün cavab:{" "}
-                        <span className="font-medium">
-                          {Array.isArray(q.correct)
-                            ? q.correct.map((c, idx) => (idx > 0 ? ", " : "") + String.fromCharCode(65 + c) + ") " + q.options[c]).join("")
-                            : String.fromCharCode(65 + q.correct) + ") " + q.options[q.correct]}
-                        </span>
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <span className="text-neutral-800">
-                    Sual {i + 1}:{" "}
-                    <span className="font-medium">
-                      {isCorrect ? "Düzgün" : given === null ? "Cavabsız" : "Səhv"}
-                    </span>
-                  </span>
-                )}
-              </div>
-            );
-          })}
+          {result.analysis?.map((item, i) => (
+            <div
+              key={i}
+              className={`rounded-md border px-4 py-3 text-sm ${
+                item.isCorrect ? "border-success/25 bg-success-soft" : "border-danger/25 bg-danger-soft"
+              }`}
+            >
+              <p className="font-medium text-neutral-900">
+                {i + 1}. {item.questionText}
+              </p>
+              {item.image && <QuestionImage image={item.image} />}
+              <div className="space-y-2">{item.options.map((option, index) => item.optionImages?.[index] ? <div key={index}><p className="text-sm">{String.fromCharCode(65 + index)}) {option}</p><QuestionImage image={item.optionImages[index]} /></div> : null)}</div>
+              {item.explanation && <p className="mt-2 text-sm text-neutral-600">İzah: {item.explanation}</p>}
+              <p className="mt-1 text-neutral-700">
+                Cavabınız:{" "}
+                <span className="font-medium">
+                  {item.given !== null
+                    ? (Array.isArray(item.given)
+                        ? item.given.map((g) => `${String.fromCharCode(65 + g)}) ${item.options[g]}`).join(", ")
+                        : `${String.fromCharCode(65 + item.given)}) ${item.options[item.given]}`)
+                    : "— cavabsız"}
+                </span>
+              </p>
+
+            </div>
+          ))}
         </div>
       </main>
     </div>

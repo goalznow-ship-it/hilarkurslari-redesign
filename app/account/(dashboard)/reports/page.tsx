@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, Filter, Calendar, Users, FileText, CreditCard } from "lucide-react";
 
-import { getCurrentUser, getExams, getFilteredTicketSales, getUsers, generateSalesReport } from "@/lib/store";
+import { getCurrentUser, getExams, getFilteredTicketSales, getUsers, generateSalesReport } from "@/lib/backend-store";
 import { escapeCsvCell } from "@/lib/helpers";
 import type { Exam, User } from "@/lib/types";
 

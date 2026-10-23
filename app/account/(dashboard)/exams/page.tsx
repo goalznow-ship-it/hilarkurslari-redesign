@@ -24,7 +24,7 @@ import {
   getExams,
   getSession,
   initStore,
-} from "@/lib/store";
+} from "@/lib/backend-store";
 import { PHASE_LABELS, currentAcademicYear } from "@/lib/helpers";
 import type { Exam, ExamPhase } from "@/lib/types";
 
@@ -63,22 +63,22 @@ export default function ExamsPage() {
     );
   }, [exams, search]);
 
-  const handleDelete = (exam: Exam) => {
+  const handleDelete = async (exam: Exam) => {
     if (
       window.confirm(
-        `"${exam.title}" imtahanı və ona aid bütün nəticələr silinəcək. Davam edilsin?`,
+        `"${exam.title}" imtahanı arxivləşdiriləcək, nəticələr qorunacaq. Davam edilsin?`,
       )
     ) {
       try {
-        deleteExam(exam.id);
+        await deleteExam(exam.id);
         setExams(getExams());
       } catch { window.alert("İmtahan tam silinmədi. Yaddaş məlumatlarını yoxlayın və yenidən cəhd edin."); }
     }
   };
 
-  const handleCopy = (exam: Exam) => {
+  const handleCopy = async (exam: Exam) => {
     try {
-      copyExam(exam.id);
+      await copyExam(exam.id);
       setExams(getExams());
     } catch { window.alert("İmtahan kopyalanmadı. Yenidən cəhd edin."); }
   };

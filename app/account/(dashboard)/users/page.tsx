@@ -7,7 +7,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-import { createUser, deleteUser, getCurrentUser, getCompanies, getExams, getUsers, updateUser } from "@/lib/store";
+import { request, createUser, deleteUser, getCurrentUser, getCompanies, getExams, getUsers, updateUser } from "@/lib/backend-store";
 import { examStatus } from "@/lib/helpers";
 import type { User, UserRole, Exam } from "@/lib/types";
 
@@ -44,7 +44,7 @@ const schema = z.object({
   email: z.string().email("Düzgün e-poçt yazın."),
   role: z.enum(["admin", "coordinator", "teacher", "seller"]),
   active: z.boolean(),
-  password: z.string().optional(),
+  password: z.string().refine(value=>!value||(value.length>=12&&value.length<=256),"Şifrə 12–256 simvol olmalıdır.").optional(),
   confirmPassword: z.string().optional(),
   companyId: z.string().optional(),
   sellerExamIds: z.array(z.string()).optional(),
@@ -71,6 +71,7 @@ export default function UsersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [enrollmentLink,setEnrollmentLink]=useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [localSellerExamIds, setLocalSellerExamIds] = useState<string[]>([]);
 
@@ -177,13 +178,14 @@ export default function UsersPage() {
     try {
       const result = editingUser
         ? await updateUser({ ...editingUser, ...userData }, values.password)
-        : await createUser({ ...userData, password: values.password || "hilal123" });
+        : await createUser({ ...userData, password: values.password || "" });
 
       if (!result.success) {
         setSubmitError(result.error ?? "Xəta baş verdi.");
         return;
       }
 
+      if("enrollmentToken" in result && typeof result.enrollmentToken === "string")setEnrollmentLink(window.location.origin+"/password-setup#token="+result.enrollmentToken);
       setUsers(getUsers());
       setDialogOpen(false);
     } catch {
@@ -196,7 +198,7 @@ export default function UsersPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Bu istifadəçini silmək istədiyinizə əminsiniz?")) return;
     try {
-      const result = deleteUser(id);
+      const result = await deleteUser(id);
       if (!result.success) {
         alert(result.error ?? "Silinmə zaman xəta baş verdi.");
         return;
@@ -211,6 +213,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
+      {enrollmentLink && <div role="status" className="rounded-md border p-3 text-sm"><p>Bu məxfi keçidi yalnız əməkdaşa təhlükəsiz kanalla göndərin. 24 saat / bir dəfə istifadə.</p><Input aria-label="Şifrə qurulması keçidi" value={enrollmentLink} readOnly /><Button variant="outline" onClick={()=>setEnrollmentLink("")}>Gizlət</Button></div>}
       {/* Page Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -300,6 +303,7 @@ export default function UsersPage() {
                   )}
 
                   <div className="flex items-center gap-1.5 ml-auto">
+                      <Button variant="outline" onClick={async()=>{try{const result=await request<{token:string}>(`/api/users/${user.id}/enrollment`,"POST");setEnrollmentLink(window.location.origin+"/password-setup#token="+result.token);}catch{alert("Keçid yaradılmadı.");}}}>Şifrə qur</Button>
                       <Button variant="ghost" size="icon" onClick={() => openEditDialog(user)}>
                         <Edit className="size-4" />
                       </Button>
@@ -447,12 +451,12 @@ export default function UsersPage() {
             {/* Password fields */}
             <div className="space-y-2">
               <Label htmlFor="password">
-                {editingUser ? "Yeni şifrə (boş = dəyişməsin)" : "Şifrə *"}
+                {editingUser ? "Yeni şifrə (boş = dəyişməsin)" : "Şifrə (boş: təhlükəsiz keçid)"}
               </Label>
               <Input
                 id="password"
                 type="password"
-                placeholder={editingUser ? "Boş qoyun" : "Minimum 6 simvol"}
+                placeholder={editingUser ? "Boş qoyun" : "Minimum 12 simvol və ya boş buraxın"}
                 {...register("password")}
                 aria-invalid={Boolean(errors.password)}
               />

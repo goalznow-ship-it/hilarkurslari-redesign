@@ -38,7 +38,7 @@ import {
 } from "@/components/ui";
 import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { clearSession, getCurrentUser, canAccessPage } from "@/lib/store";
+import { clearSession, getCurrentUser, canAccessPage, refreshAdminState } from "@/lib/backend-store";
 
 const NAV_GROUPS = [
   {
@@ -46,6 +46,7 @@ const NAV_GROUPS = [
     items: [
       { href: "/account", label: "İdarəetmə Paneli", icon: LayoutDashboard },
       { href: "/account/reports", label: "Hesabatlıq", icon: BarChart3 },
+      { href: "/account/migration", label: "Məlumat migrasiyası", icon: FileCheck2 },
       {
         href: "/account/online-exams",
         label: "Onlayn İmtahanlar",
@@ -115,6 +116,7 @@ export default function DashboardShell({
   const pathname = usePathname();
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -125,19 +127,24 @@ export default function DashboardShell({
 
   // Active account and route permissions are rechecked on navigation and cross-tab changes.
   useEffect(() => {
-    const check = () => {
+    const check = async () => {
       try {
+        setReady(false);
+        await refreshAdminState();
+        setLoadError("");
         const account = getCurrentUser();
         setUser(account ?? null);
         if (!account) { setReady(false); router.replace("/admin/login"); return; }
         if (!canAccessPage(account, pathname)) { setReady(false); router.replace(account.role === "seller" ? "/account/seller-sales" : "/account"); return; }
         setCollapsed(window.localStorage.getItem("kitabca.sidebar.collapsed") === "1");
         setReady(true);
-      } catch { setReady(false); router.replace("/admin/login"); }
+      } catch { setReady(false); setLoadError("Serverə qoşulmaq mümkün olmadı və ya sessiya bitdi. Yenidən daxil olun."); }
     };
     const t = setTimeout(check, 0);
+    const expired=()=>{setReady(false);router.replace("/admin/login");};
+    window.addEventListener("kitabca:session-expired",expired);
     window.addEventListener("storage", check);
-    return () => { clearTimeout(t); window.removeEventListener("storage", check); };
+    return () => { clearTimeout(t); window.removeEventListener("kitabca:session-expired",expired);window.removeEventListener("storage", check); };
   }, [router, pathname]);
 
   // ⌘K / Ctrl+K — global axtarış
@@ -159,8 +166,8 @@ export default function DashboardShell({
     });
   };
 
-  const handleLogout = () => {
-    try { clearSession(); setUser(null); setReady(false); router.push("/admin/login"); }
+  const handleLogout = async () => {
+    try { await clearSession(); setUser(null); setReady(false); router.push("/admin/login"); }
     catch { alert("Çıxış yadda saxlanılmadı. Yenidən cəhd edin."); }
   };
 
@@ -461,7 +468,7 @@ export default function DashboardShell({
 
         {/* Əsas məzmun */}
         <main id="main-content" className="mx-auto w-full max-w-[1480px] min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">
-          {ready && user && canAccessPage(user, pathname) ? children : null}
+          {loadError && <p role="alert" className="p-4 text-danger-fg">{loadError} <Link href="/admin/login">Daxil ol</Link></p>}{!ready && !loadError && <p role="status" className="p-4">Yüklənir…</p>}{ready && user && canAccessPage(user, pathname) ? children : null}
         </main>
       </div>
 

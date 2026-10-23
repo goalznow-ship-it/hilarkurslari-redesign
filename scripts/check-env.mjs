@@ -1,0 +1,12 @@
+import nextEnv from '@next/env';
+const {loadEnvConfig}=nextEnv;
+loadEnvConfig(process.cwd());
+const required=['DATABASE_URL','AUTH_SECRET','NEXT_PUBLIC_APP_URL'];
+for(const key of required)if(!process.env[key])throw Error('Required configuration missing: '+key);
+const database=new URL(process.env.DATABASE_URL),app=new URL(process.env.NEXT_PUBLIC_APP_URL);
+if(!['postgresql:','postgres:'].includes(database.protocol))throw Error('DATABASE_URL must use PostgreSQL');
+if(process.env.AUTH_SECRET.length<32||/your-|example|change-me/i.test(process.env.AUTH_SECRET))throw Error('AUTH_SECRET must be a unique random secret of at least 32 characters');
+if(app.username||app.password||app.pathname!=='/'||app.search||app.hash)throw Error('NEXT_PUBLIC_APP_URL must be a canonical origin');
+if(!['development','test'].includes(process.env.NODE_ENV)&&app.protocol!=='https:')throw Error('Production public origin requires HTTPS');
+if(process.env.CRON_SECRET&&(process.env.CRON_SECRET.length<32||/your-|example|change-me/i.test(process.env.CRON_SECRET)))throw Error('CRON_SECRET must be independent and random (at least 32 characters)');
+console.log('Required configuration is valid. Values are not printed.');

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getAcademicYears, getCompanies, getCurrentUser, newId, saveAcademicYear, saveCompany } from "@/lib/store";
+import { getAcademicYears, getCompanies, getCurrentUser, newId, saveAcademicYear, saveCompany } from "@/lib/backend-store";
 import type { AcademicYear, Company } from "@/lib/types";
 import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label } from "@/components/ui";
 
@@ -21,7 +21,7 @@ export default function RegistryManager({ kind }: { kind: "companies" | "years" 
   const [success, setSuccess] = useState("");
   useEffect(() => {
     const timer = setTimeout(() => {
-      try { setRecords(company ? getCompanies() : getAcademicYears()); setAllowed(getCurrentUser()?.role === "admin"); }
+      try { setRecords(company ? getCompanies() : getAcademicYears()); setAllowed(getCurrentUser()?.role === "admin" && !getCurrentUser()?.companyId); }
       catch { setError("Reyestr yüklənmədi. Səhifəni yeniləyin."); }
       finally { setLoading(false); }
     }, 0);
@@ -30,10 +30,10 @@ export default function RegistryManager({ kind }: { kind: "companies" | "years" 
   const start = (record: RecordRow | null) => {
     setEditing(record); setName(record ? "name" in record ? record.name : record.label : ""); setCode(record && "code" in record ? record.code : ""); setActive(record?.active ?? true); setError(""); setSuccess(""); setOpen(true);
   };
-  const save = (event: React.FormEvent) => {
+  const save = async (event: React.FormEvent) => {
     event.preventDefault(); setError(""); setSuccess("");
     const base = { id: editing?.id ?? newId(), active, createdAt: editing?.createdAt ?? "" };
-    const result = company ? saveCompany({ ...base, name, code }, !!editing) : saveAcademicYear({ ...base, label: name }, !!editing);
+    const result = company ? await saveCompany({ ...base, name, code }, !!editing) : await saveAcademicYear({ ...base, label: name }, !!editing);
     if (!result.success || !result.record) { setError(result.error ?? "Dəyişiklik saxlanılmadı."); return; }
     const record = result.record;
     setRecords((rows) => rows.some((row) => row.id === record.id) ? rows.map((row) => row.id === record.id ? record : row) : [...rows, record]);

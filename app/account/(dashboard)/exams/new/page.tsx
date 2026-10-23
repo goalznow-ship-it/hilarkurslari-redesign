@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import ExamForm from "@/components/ExamForm";
-import { getSession } from "@/lib/store";
+import { getSession } from "@/lib/backend-store";
 
 export default function NewExamPage() {
   const router = useRouter();

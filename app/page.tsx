@@ -18,15 +18,10 @@ import {
 } from "lucide-react";
 
 import { Button, Field, Input } from "@/components/ui";
-import {
-  findResultByParticipant,
-  getExams,
-  getExam,
-  initStore,
-  startExamSession,
-} from "@/lib/store";
-import { examStatus, normalizeFin, normalizeTicket } from "@/lib/helpers";
-import type { Exam } from "@/lib/types";
+import { normalizeFin, normalizeTicket } from "@/lib/helpers";
+
+import { getActiveExams,  startExam } from "@/lib/api-client";
+import type { SafeExam } from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */
 /* Validasiya                                                                 */
@@ -50,10 +45,11 @@ type FormValues = z.infer<typeof schema>;
 
 export default function ExamEntryPage() {
   const router = useRouter();
-  const [exams, setExams] = useState<Exam[] | null>(null);
+  const [exams, setExams] = useState<SafeExam[] | null>(null);
   const [online, setOnline] = useState(true);
   const [serverError, setServerError] = useState<string | null>(null);
   const [resultHref, setResultHref] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const {
     control,
@@ -72,15 +68,22 @@ export default function ExamEntryPage() {
 
   /* --- Aktiv imtahanlar: 1-dirsə seçim addımı yoxdur --- */
   useEffect(() => {
-    const t = setTimeout(() => {
-      initStore();
-      const active = getExams().filter((e) => e.onlineEnabled && e.questions.length > 0 && examStatus(e) === "active");
-      setExams(active);
-      if (active.length === 1) {
-        setValue("examId", active[0].id, { shouldValidate: false });
+    const loadExams = async () => {
+      try {
+        const data = await getActiveExams();
+        const active = data.exams.filter((e) => e.onlineEnabled && e.questionCount > 0 && e.status === "active");
+        setExams(active);
+        if (active.length === 1) {
+          setValue("examId", active[0].id, { shouldValidate: false });
+        }
+      } catch (error) {
+        console.error("Failed to load exams:", error);
+        setServerError("İmtahanlar yüklənmədi. Səhifəni yeniləyin.");
+      } finally {
+        setLoading(false);
       }
-    }, 0);
-    return () => clearTimeout(t);
+    };
+    loadExams();
   }, [setValue]);
 
   /* --- İnternet / brauzer yoxlaması --- */
@@ -100,47 +103,17 @@ export default function ExamEntryPage() {
     [exams],
   );
 
-  const onSubmit = handleSubmit((values) => {
+  const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
     setResultHref(null);
 
     try {
-    const exam = getExam(values.examId);
-    if (!exam?.onlineEnabled || !exam.questions.length) {
-      setServerError("İmtahan tapılmadı.");
-      return;
-    }
+      const finNorm = normalizeFin(values.fin);
+      const ticketNorm = normalizeTicket(values.ticket);
 
-    const status = examStatus(exam);
-    if (status === "planned") {
-      setServerError("İmtahan hələ başlamayıb.");
-      return;
-    }
-    if (status === "ended") {
-      setServerError("İmtahan bitib.");
-      return;
-    }
-
-    const finNorm = normalizeFin(values.fin);
-    const ticketNorm = normalizeTicket(values.ticket);
-
-    if (
-      exam.ticketCodes.length > 0 &&
-      !exam.ticketCodes.some((c) => c.toUpperCase() === ticketNorm)
-    ) {
-      setServerError("Bu bilet kodu bu imtahan üçün qeyd olunmayıb.");
-      return;
-    }
-
-    const existing = findResultByParticipant(exam.id, finNorm);
-    if (existing) {
-      setServerError("Bu FİN kodu ilə imtahan artıq yekunlaşdırılıb.");
-      setResultHref(`/online-exam/result?rid=${existing.id}`);
-      return;
-    }
-
-      startExamSession(exam.id, finNorm, ticketNorm);
-      router.push("/online-exam");
+      // Start exam session via API
+      const data = await startExam(values.examId, finNorm, ticketNorm);
+      router.push(`/online-exam?attemptId=${data.attemptId}`);
     } catch (error) {
       setServerError(error instanceof Error ? error.message : "İmtahana giriş saxlanılmadı. Yenidən cəhd edin.");
     }
@@ -157,6 +130,14 @@ export default function ExamEntryPage() {
     const pasted = normalizeTicket(value);
     setValue("ticket", pasted, { shouldValidate: true });
   };
+
+  if (loading) {
+    return (
+      <div className="student-portal min-h-[100dvh] flex items-center justify-center bg-neutral-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-700" />
+      </div>
+    );
+  }
 
   return (
     <div className="student-portal min-h-[100dvh]">

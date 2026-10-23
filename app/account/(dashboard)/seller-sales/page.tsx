@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, FileText, Plus, Search, User as UserIcon } from "lucide-react";
 
-import { getCurrentUser, getExams, sellTicket, getAvailableTickets, getSalesBySeller } from "@/lib/store";
+import { getCurrentUser, getExams, sellTicket, getAvailableTickets, getSalesBySeller } from "@/lib/backend-store";
 import { examStatus, normalizeTicket } from "@/lib/helpers";
 import type { Exam, TicketSale, User } from "@/lib/types";
 
@@ -144,7 +144,7 @@ export default function SellerSalesPage() {
     }
 
     try {
-      const result = sellTicket(examId, ticketCode, seller.id, studentFIN, studentName, price);
+      const result = await sellTicket(examId, ticketCode, seller.id, studentFIN, studentName, price);
       if (!result.success) { setFormError(result.error ?? "Satış zamanı xəta baş verdi."); return; }
       if (result.sale) setSales((prev) => [result.sale!, ...prev]);
       setFormSuccess("Bilet uğurla satıldı!");

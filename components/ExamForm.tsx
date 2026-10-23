@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bookmark,
@@ -43,7 +43,7 @@ import {
   saveExam,
   validateQuestion,
   normalizeQuestionType,
-} from "@/lib/store";
+} from "@/lib/backend-store";
 import { currentAcademicYear, formatDateTimeLocal, normalizeTicket, PHASE_LABELS, PHASE_ORDER } from "@/lib/helpers";
 import type { Exam, ExamPhase, Question, QuestionType, Company, AcademicYear } from "@/lib/types";
 
@@ -91,6 +91,9 @@ function blankQuestion(): Question {
 
 export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Exam }) {
   const router = useRouter();
+  const creatingId=useRef(newId());
+  const savingRef=useRef(false);
+  const [saving,setSaving]=useState(false);
 
   const [state, setState] = useState<EditorState>(() => ({
     title: exam?.title ?? "",
@@ -181,9 +184,9 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
       qs.length > 1 ? qs.filter((q) => q.id !== qid) : qs,
     );
 
-  const addBankQuestion = (q: Question) => {
+  const addBankQuestion = async (q: Question) => {
     try {
-      const result = addQuestionValidated(q);
+      const result = await addQuestionValidated(q);
       if (!result.success) { setErrors([result.error ?? "Sual banka əlavə edilmədi."]); return; }
       setBankQuestions(getQuestionBank());
     } catch { setErrors(["Sual banka yazılmadı. Yenidən cəhd edin."]); }
@@ -205,8 +208,9 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if(savingRef.current)return;
     const errs: string[] = [];
 
     if (!state.title.trim()) errs.push("İmtahanın adı boşdur.");
@@ -260,14 +264,16 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
       tickets.push(...normalizedSubmitted);
     }
 
-    const id = mode === "edit" && exam ? exam.id : newId();
+    savingRef.current=true;setSaving(true);
+    const id = mode === "edit" && exam ? exam.id : creatingId.current;
     const isEdit = mode === "edit";
 
     let result;
     try {
-      result = saveExam(
+      result = await saveExam(
         {
           id,
+          revision:exam?.revision,
           title: state.title.trim(),
           subject: state.subject.trim(),
           startsAt: new Date(state.startsAt).toISOString(),
@@ -289,10 +295,12 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
         isEdit,
       );
     } catch {
+      savingRef.current=false;setSaving(false);
       setErrors(["Məlumat bazası yazılarkən xəta baş verdi. Yenidən cəhd edin."]);
       return;
     }
 
+    savingRef.current=false;setSaving(false);
     if (!result.success) {
       setErrors([result.error ?? "İmtahan saxlanılarkən xəta baş verdi."]);
       return;
@@ -459,6 +467,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
               <Label htmlFor="academicYear">Tədris ili</Label>
               <select id="academicYear" value={state.academicYear} onChange={(event) => setField("academicYear", event.target.value)} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm">
                 <option value="">Tədris ili seçin</option>
+                {exam?.academicYear&&!years.some(year=>year.label===exam.academicYear)&&<option value={exam.academicYear}>{exam.academicYear} (tarixi)</option>}
                 {years.filter((year) => year.active || year.label === exam?.academicYear).map((year) => <option key={year.id} value={year.label}>{year.label}{year.active ? "" : " (arxiv)"}</option>)}
               </select>
             </div>
@@ -734,6 +743,7 @@ export default function ExamForm({ mode, exam }: { mode: ExamFormMode; exam?: Ex
       <div className="sticky bottom-4 z-20 flex justify-end pt-2">
         <Button
           type="submit"
+          loading={saving}
           className="gap-2 bg-brand-700 hover:bg-brand-800 text-white shadow-lg"
         >
           Yadda Saxla və Dərc Et

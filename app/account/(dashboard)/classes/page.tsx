@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   GraduationCap,
   Layers,
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 import { currentAcademicYear } from "@/lib/helpers";
-import { deleteClass, getClasses, getSession, saveClass, getAcademicYears } from "@/lib/store";
+import { deleteClass, getClasses, getSession, saveClass, getAcademicYears, newId } from "@/lib/backend-store";
 import type { SchoolClass } from "@/lib/types";
 
 import {
@@ -70,6 +70,9 @@ function blankForm(): FormState {
 
 export default function ClassesPage() {
   const router = useRouter();
+  const createId=useRef(newId());
+  const savingRef=useRef(false);
+  const [saving,setSaving]=useState(false);
   const [academicYears, setAcademicYears] = useState<import("@/lib/types").AcademicYear[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [search, setSearch] = useState("");
@@ -117,6 +120,7 @@ export default function ClassesPage() {
   }, [classes]);
 
   const openNew = () => {
+    createId.current=newId();
     setEditing(null);
     setForm(blankForm());
     setDialogOpen(true);
@@ -135,11 +139,12 @@ export default function ClassesPage() {
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if(savingRef.current)return;
     if (!form.name.trim() || !form.teacher.trim()) return;
 
     const schoolClass: SchoolClass = {
-      id: editing?.id ?? `class-${Date.now()}`,
+      id: editing?.id ?? createId.current,
       name: form.name.trim(),
       grade: form.grade,
       section: form.section.trim(),
@@ -149,20 +154,21 @@ export default function ClassesPage() {
       createdAt: editing?.createdAt ?? new Date().toISOString(),
     };
 
+    savingRef.current=true;setSaving(true);
     try {
-      saveClass(schoolClass);
+      await saveClass(schoolClass);
       reload();
       setDialogOpen(false);
-    } catch { window.alert("Sinif saxlanılmadı. Yenidən cəhd edin."); }
+    } catch(error) { window.alert(error instanceof Error?error.message:"Sinif saxlanılmadı. Yenidən cəhd edin."); } finally{savingRef.current=false;setSaving(false);}
   };
 
-  const handleDelete = (c: SchoolClass) => {
+  const handleDelete = async (c: SchoolClass) => {
     if (
       window.confirm(
         `"${c.name}" sinifi silinəcək. Davam edilsin?`,
       )
     ) {
-      try { deleteClass(c.id); reload(); }
+      try { await deleteClass(c.id); reload(); }
       catch { window.alert("Sinif silinmədi. Yenidən cəhd edin."); }
     }
   };
@@ -474,7 +480,7 @@ export default function ClassesPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="c-year">Tədris ili</Label>
-                <select id="c-year" value={form.academicYear} onChange={(event) => setForm((value) => ({ ...value, academicYear: event.target.value }))} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"><option value="">Tədris ili seçin</option>{academicYears.filter((year) => year.active || year.label === editing?.academicYear).map((year) => <option key={year.id} value={year.label}>{year.label}{year.active ? "" : " (arxiv)"}</option>)}</select>
+                <select id="c-year" value={form.academicYear} onChange={(event) => setForm((value) => ({ ...value, academicYear: event.target.value }))} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"><option value="">Tədris ili seçin</option>{editing?.academicYear&&!academicYears.some(year=>year.label===editing.academicYear)&&<option value={editing.academicYear}>{editing.academicYear} (tarixi)</option>}{academicYears.filter((year) => year.active || year.label === editing?.academicYear).map((year) => <option key={year.id} value={year.label}>{year.label}{year.active ? "" : " (arxiv)"}</option>)}</select>
               </div>
             </div>
           </div>
@@ -490,6 +496,7 @@ export default function ClassesPage() {
             <Button
               type="button"
               onClick={handleSave}
+              loading={saving}
               disabled={!form.name.trim() || !form.teacher.trim()}
               className="bg-brand-700 text-white hover:bg-brand-800"
             >

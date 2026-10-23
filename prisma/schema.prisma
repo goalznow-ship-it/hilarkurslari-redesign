@@ -1,0 +1,289 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum QuestionType {
+  single
+  true_false
+  multiple
+}
+
+enum QuestionVerification {
+  pending
+  verified
+  rejected
+}
+
+enum ExamPhase {
+  preparing
+  first_ready
+  review
+  done
+}
+
+enum ExamStatus {
+  planned
+  active
+  ended
+}
+
+enum UserRole {
+  admin
+  coordinator
+  teacher
+  seller
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  questions Question[]
+  exams     Exam[]
+  users     User[]
+  classes   SchoolClass[]
+  results   ExamResult[]
+  sales     TicketSale[]
+}
+
+model AcademicYear {
+  exams Exam[] @relation("ExamYear")
+  classes SchoolClass[] @relation("ClassYear")
+  id        String   @id @default(cuid())
+  label     String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id              String     @id @default(cuid())
+  name            String
+  email           String     @unique
+  role            UserRole
+  active          Boolean    @default(true)
+  passwordHash    String
+  companyId       String?
+  sellerExamIds   String[]
+  company         Company?   @relation(fields: [companyId], references: [id])
+  sales           TicketSale[] @relation("SellerSales")
+  sessions        Session[]
+  enrollments     StaffEnrollment[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([email])
+  @@index([companyId])
+  @@index([role])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model Exam {
+  yearRecord AcademicYear? @relation("ExamYear",fields:[academicYear],references:[label],onUpdate:Restrict,onDelete:Restrict)
+  id             String       @id @default(cuid())
+  title          String
+  subject        String
+  startsAt       DateTime
+  endsAt         DateTime
+  durationMin    Int
+  questions      Json
+  ticketCodes    String[]
+  createdAt      DateTime     @default(now())
+  status         ExamPhase    @default(preparing)
+  code           String?      @unique
+  grade          String?
+  block          String?
+  academicYear   String?
+  variants       Int          @default(1)
+  pdfReady       Boolean      @default(false)
+  onlineEnabled  Boolean      @default(false)
+  companyId      String?
+  company        Company?     @relation(fields: [companyId], references: [id])
+  results        ExamResult[]
+  sales          TicketSale[]
+  attempts       ExamAttempt[]
+  versions       ExamVersion[]
+
+  @@index([companyId])
+  @@index([academicYear])
+  @@index([onlineEnabled])
+  @@index([status])
+}
+
+model ExamVersion {
+  metadata  Json?
+  id        String   @id @default(cuid())
+  examId    String
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questions Json
+  createdAt DateTime @default(now())
+  attempts  ExamAttempt[]
+
+  @@index([examId])
+}
+
+model ExamAttempt {
+  id              String     @id @default(cuid())
+  examId          String
+  exam            Exam       @relation(fields: [examId], references: [id], onDelete: Cascade)
+  versionId       String
+  version         ExamVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  fin             String
+  ticketCode      String
+  answers         Json
+  status          String     @default("in_progress")
+  startedAt       DateTime   @default(now())
+  submittedAt     DateTime?
+  expiredAt       DateTime?
+  timeSpentSec    Int        @default(0)
+  result          ExamResult?
+
+  @@unique([examId, fin])
+  @@unique([examId, ticketCode])
+  @@index([examId, status])
+  @@index([fin])
+  @@index([ticketCode])
+}
+
+model ExamResult {
+  id            String    @id @default(cuid())
+  examId        String
+  exam          Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
+  attemptId     String?   @unique
+  attempt       ExamAttempt? @relation(fields: [attemptId], references: [id], onDelete: SetNull)
+  companyId     String?
+  company       Company?  @relation(fields: [companyId], references: [id])
+  academicYear  String?
+  examTitle     String
+  fin           String
+  ticketCode    String
+  answers       Json
+  questionsSnapshot Json
+  correctCount  Int
+  total         Int
+  score         Int
+  startedAt     DateTime
+  finishedAt    DateTime
+  timeSpentSec  Int
+  accessToken   String    @unique @default(cuid())
+
+  @@index([examId])
+  @@index([fin])
+  @@index([ticketCode])
+  @@index([companyId])
+  @@index([academicYear])
+  @@index([accessToken])
+}
+
+model Question {
+  companyId       String?
+  company         Company? @relation(fields:[companyId], references:[id])
+  id              String             @id @default(cuid())
+  text            String
+  options         String[]
+  correct         Json
+  type            QuestionType
+  subject         String?
+  topic           String?
+  tags            String[]
+  grade           String?
+  difficulty      String?
+  explanation     String?
+  points          Float              @default(1)
+  imageUrl        String?
+  imageAlt        String?
+  optionImages    Json?
+  verification    QuestionVerification @default(pending)
+  reviewHistory   Json?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([subject])
+  @@index([grade])
+  @@index([topic])
+  @@index([difficulty])
+  @@index([verification])
+  @@index([companyId])
+}
+
+model SchoolClass {
+  yearRecord AcademicYear @relation("ClassYear",fields:[academicYear],references:[label],onUpdate:Restrict,onDelete:Restrict)
+  id           String   @id @default(cuid())
+  name         String
+  grade        String
+  section      String?
+  teacher      String
+  studentCount Int      @default(0)
+  academicYear String
+  companyId    String?
+  company      Company? @relation(fields: [companyId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([companyId])
+  @@index([academicYear])
+  @@index([grade])
+}
+
+model TicketSale {
+  id          String   @id @default(cuid())
+  examId      String
+  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  examTitle   String
+  ticketCode  String
+  sellerId    String
+  seller      User     @relation("SellerSales", fields: [sellerId], references: [id])
+  sellerName  String
+  studentFIN  String
+  studentName String?
+  soldAt      DateTime @default(now())
+  price       Float
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+
+  @@unique([examId, ticketCode])
+  @@unique([examId, studentFIN])
+  @@index([sellerId])
+  @@index([examId])
+  @@index([companyId])
+  @@index([soldAt])
+}
+
+model RateLimitEntry {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(0)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+
+  @@index([resetAt])
+}
+model StaffEnrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
